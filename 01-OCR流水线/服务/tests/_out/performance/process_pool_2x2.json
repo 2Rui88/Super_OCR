@@ -1,0 +1,131 @@
+{
+  "config": {
+    "workers": 2,
+    "cpu_threads": 2,
+    "detection_max_side": 960
+  },
+  "serial": {
+    "items": [
+      {
+        "file": "id_front_0_scan.jpg",
+        "seconds": 18.25984780024737,
+        "correct": 6,
+        "total": 6,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "id_back_0_scan.jpg",
+        "seconds": 13.334868300240487,
+        "correct": 2,
+        "total": 2,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "driver_0_scan.jpg",
+        "seconds": 23.82158310012892,
+        "correct": 9,
+        "total": 9,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "license_0_scan.jpg",
+        "seconds": 34.74058199999854,
+        "correct": 8,
+        "total": 8,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "id_front_1_photo.jpg",
+        "seconds": 18.150606700219214,
+        "correct": 6,
+        "total": 6,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "license_1_photo.jpg",
+        "seconds": 32.117678199894726,
+        "correct": 8,
+        "total": 8,
+        "type_correct": true,
+        "wrong_fields": []
+      }
+    ],
+    "initialization_seconds": 8.88963449979201,
+    "wall_seconds": 140.4257883997634,
+    "summary": {
+      "correct": 39,
+      "total": 39,
+      "accuracy": 1.0,
+      "mean_request_seconds": 23.404194350121543,
+      "total_request_seconds": 140.42516610072926
+    }
+  },
+  "process_pool": {
+    "items": [
+      {
+        "file": "id_front_0_scan.jpg",
+        "seconds": 93.99544299999252,
+        "correct": 6,
+        "total": 6,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "id_back_0_scan.jpg",
+        "seconds": 71.09006089996547,
+        "correct": 2,
+        "total": 2,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "driver_0_scan.jpg",
+        "seconds": 177.10921690007672,
+        "correct": 9,
+        "total": 9,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "license_0_scan.jpg",
+        "seconds": 264.945769299753,
+        "correct": 8,
+        "total": 8,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "id_front_1_photo.jpg",
+        "seconds": 250.9951657000929,
+        "correct": 6,
+        "total": 6,
+        "type_correct": true,
+        "wrong_fields": []
+      },
+      {
+        "file": "license_1_photo.jpg",
+        "seconds": 365.0452459002845,
+        "correct": 8,
+        "total": 8,
+        "type_correct": true,
+        "wrong_fields": []
+      }
+    ],
+    "initialization_seconds": 0.06035810010507703,
+    "wall_seconds": 365.0909800999798,
+    "summary": {
+      "correct": 39,
+      "total": 39,
+      "accuracy": 1.0,
+      "mean_request_seconds": 203.8634836166942,
+      "total_request_seconds": 1223.1809017001651
+    }
+  },
+  "complete": true,
+  "speedup_by_wall_clock": 0.3846323137353543
+}

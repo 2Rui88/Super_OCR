@@ -1,0 +1,71 @@
+{
+ "file": "差旅费管理办法2021.pdf",
+ "provenance": "native_text_layer",
+ "pages": [
+  {
+   "page": 1,
+   "char_accuracy": 1.0,
+   "mode": "text_layer",
+   "mode_expected": "text_layer",
+   "mode_correct": true,
+   "duration_ms": 58,
+   "golden_tables": 0,
+   "extracted_tables": 0,
+   "cell_match": 0,
+   "cell_total": 0,
+   "cell_match_rate": null,
+   "structure_ok": 0,
+   "structure_rate": null
+  },
+  {
+   "page": 2,
+   "char_accuracy": 0.9978,
+   "mode": "text_layer",
+   "mode_expected": "text_layer",
+   "mode_correct": true,
+   "duration_ms": 161,
+   "golden_tables": 1,
+   "extracted_tables": 1,
+   "cell_match": 4,
+   "cell_total": 4,
+   "cell_match_rate": 1.0,
+   "structure_ok": 1,
+   "structure_rate": 1.0
+  },
+  {
+   "page": 3,
+   "char_accuracy": 0.9551,
+   "mode": "text_layer",
+   "mode_expected": "text_layer",
+   "mode_correct": true,
+   "duration_ms": 301,
+   "golden_tables": 1,
+   "extracted_tables": 1,
+   "cell_match": 12,
+   "cell_total": 12,
+   "cell_match_rate": 1.0,
+   "structure_ok": 1,
+   "structure_rate": 1.0
+  },
+  {
+   "page": 4,
+   "char_accuracy": 1.0,
+   "mode": "text_layer",
+   "mode_expected": "text_layer",
+   "mode_correct": true,
+   "duration_ms": 28,
+   "golden_tables": 0,
+   "extracted_tables": 0,
+   "cell_match": 0,
+   "cell_total": 0,
+   "cell_match_rate": null,
+   "structure_ok": 0,
+   "structure_rate": null
+  }
+ ],
+ "char_accuracy_mean": 0.9882,
+ "cell_match_rate": 1.0,
+ "table_structure_rate": 1.0,
+ "mode_accuracy": 1.0,
+ "duration_ms_total": 548
+}

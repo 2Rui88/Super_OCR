@@ -1,0 +1,1082 @@
+[
+  {
+    "file": "印章管理规定2021（盖章扫描件）.pdf",
+    "pages": 4,
+    "text_chars": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "file": "差旅费管理办法2021.pdf",
+    "pages": 4,
+    "text_chars": [
+      144,
+      716,
+      638,
+      86
+    ],
+    "seconds": 0.1483387998305261,
+    "source_modes": [
+      "text_layer",
+      "text_layer",
+      "text_layer",
+      "text_layer"
+    ],
+    "tables": 3,
+    "ocr_calls": 0,
+    "result": {
+      "file_sha256": "2da4e2285a9884706734e6a3add52b8a75b570d6c6db0af3cb6cf962ba701ac7",
+      "filename": "差旅费管理办法2021.pdf",
+      "pages": [
+        {
+          "page_num": 1,
+          "source_mode": "text_layer",
+          "duration_ms": 30,
+          "width_px": 1190,
+          "height_px": 1684,
+          "blocks": [
+            {
+              "type": "text",
+              "text": "澄川建筑工程设计集团有限公司文件",
+              "bbox": [
+                0.15378151260504203,
+                0.124691217925373,
+                0.8529411764705882,
+                0.16792161447701714
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "澄设发〔2021〕9号",
+              "bbox": [
+                0.4192100717240021,
+                0.18156770176105996,
+                0.5875125147715337,
+                0.20152019944723315
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "关于印发《差旅费管理办法（2021 版）》的通知",
+              "bbox": [
+                0.20156134597393646,
+                0.2309441826972146,
+                0.8051613174566702,
+                0.2592102195757868
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "集团各部门、各设计院、分公司：",
+              "bbox": [
+                0.12773109243697478,
+                0.2798456114997773,
+                0.43025210084033616,
+                0.2997981091859505
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "《差旅费管理办法（2021 版）》已经集团总裁办公会审议通过，现印发给你们，",
+              "bbox": [
+                0.16806722689075632,
+                0.3095368229012025,
+                0.876490796513918,
+                0.3294893024652984
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "请认真遵照执行。",
+              "bbox": [
+                0.12773109243697478,
+                0.33447744047839967,
+                0.28907563025210087,
+                0.35442992004249557
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "澄川建筑工程设计集团有限公司",
+              "bbox": [
+                0.5966386554621849,
+                0.36416865187982483,
+                0.8789915966386554,
+                0.38412113144392074
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "2020年12月18日",
+              "bbox": [
+                0.7428168288799895,
+                0.38910926945702196,
+                0.8789914940585609,
+                0.40906174902111786
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            }
+          ]
+        },
+        {
+          "page_num": 2,
+          "source_mode": "text_layer",
+          "duration_ms": 38,
+          "width_px": 1190,
+          "height_px": 1684,
+          "blocks": [
+            {
+              "type": "text",
+              "text": "差旅费管理办法（2021 版）",
+              "bbox": [
+                0.33013277454536505,
+                0.08783254374234524,
+                0.6765898888852416,
+                0.11609857155987882
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第一章 总则",
+              "bbox": [
+                0.4504201680672269,
+                0.13673396348386932,
+                0.5563025210084034,
+                0.15668645210900387
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第一条 为规范澄川建筑工程设计集团有限公司（以下简称\"集团\"）差旅费管理，",
+              "bbox": [
+                0.16806722689075632,
+                0.16642518394633313,
+                0.8752000311843487,
+                0.18637768163250631
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "厉行节约，合理控制费用支出，制定本办法。",
+              "bbox": [
+                0.12773109243697478,
+                0.19136580152353028,
+                0.5310924369747899,
+                0.21131829920970346
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第二条 本办法适用于集团总部及各设计院、分公司全体在岗员工。",
+              "bbox": [
+                0.16806722689075632,
+                0.22105701292495547,
+                0.7579831932773109,
+                0.24100951061112863
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "本办法所称差旅费，是指员工临时到常驻工作地以外地区因公出差发生的城市间",
+              "bbox": [
+                0.16806722689075632,
+                0.25074822432638066,
+                0.8739495798319328,
+                0.2707007220125538
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "交通费、住宿费、伙食补助费和市内交通费。项目差旅费计入项目成本。",
+              "bbox": [
+                0.12773109243697478,
+                0.2756888419035778,
+                0.773109243697479,
+                0.295641339589751
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第三条 财务部是差旅费归口管理部门，负责本办法的制定、解释和差旅费报销审",
+              "bbox": [
+                0.16806722689075632,
+                0.30538005330500295,
+                0.8789915966386554,
+                0.32533253286909886
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "核；各部门负责人对本部门出差事项的必要性负责。",
+              "bbox": [
+                0.12773109243697478,
+                0.33032067088220013,
+                0.5915966386554622,
+                0.35027315044629603
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第二章 出差审批",
+              "bbox": [
+                0.43025210084033616,
+                0.36476247610785334,
+                0.5764705882352941,
+                0.38471495567194924
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第四条 员工出差前应填写出差审批单，经部门负责人审批后方可出差。部门负责",
+              "bbox": [
+                0.16806722689075632,
+                0.3944536875092785,
+                0.8789915966386554,
+                0.4144061670733744
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "人出差由分管领导审批。",
+              "bbox": [
+                0.12773109243697478,
+                0.4193943050864756,
+                0.3495798319327731,
+                0.43934678465057153
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第五条 因紧急情况来不及事前审批的，应在返回后及时补办审批手续。",
+              "bbox": [
+                0.16806722689075632,
+                0.44908551648790085,
+                0.7983193277310925,
+                0.46903799605199675
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第六条 各部门应严格控制出差人数和天数，不得无实质内容出差。出差人员应按",
+              "bbox": [
+                0.16806722689075632,
+                0.478776727889326,
+                0.8789915966386554,
+                0.4987292074534219
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "批准行程执行，因私绕道发生的费用由个人承担。",
+              "bbox": [
+                0.12773109243697478,
+                0.5037173454665231,
+                0.5714285714285714,
+                0.5236698250306191
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "出差审批单应写明出差事由、地点、起止日期、人数和交通方式。能够通过电",
+              "bbox": [
+                0.16806722689075632,
+                0.5334085568679483,
+                0.853781512605042,
+                0.5533610364320443
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "话、视频会议解决的事项，原则上不安排出差。单次出差超过 15 天的，须报分管领",
+              "bbox": [
+                0.12773109243697478,
+                0.5583491744451455,
+                0.8626150948660715,
+                0.5783016540092414
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "导审批。",
+              "bbox": [
+                0.12773109243697478,
+                0.5832897920223427,
+                0.20840336134453782,
+                0.6032422715864385
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第三章 城市间交通费",
+              "bbox": [
+                0.41008403361344536,
+                0.6177315972479959,
+                0.5966386554621849,
+                0.6376840768120917
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第七条 城市间交通费凭票据实报销。乘坐标准：集团领导及高级职称人员可乘坐",
+              "bbox": [
+                0.16806722689075632,
+                0.647422808649421,
+                0.8789915966386554,
+                0.6673752882135169
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "火车一等座或软卧、飞机经济舱；其他人员乘坐火车二等座或硬卧、飞机经济舱。",
+              "bbox": [
+                0.12773109243697478,
+                0.6723634262266182,
+                0.853781512605042,
+                0.6923159057907141
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第八条 未按规定等级乘坐交通工具的，超出部分由个人自理。乘坐飞机应优先选",
+              "bbox": [
+                0.16806722689075632,
+                0.7020546376280433,
+                0.8789915966386554,
+                0.7220071171921393
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "择折扣机票，随票购买的航空意外险每人每次限一份。",
+              "bbox": [
+                0.12773109243697478,
+                0.7269952552052406,
+                0.611764705882353,
+                0.7469477347693364
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第四章 住宿费",
+              "bbox": [
+                0.4403361344537815,
+                0.7614370604308937,
+                0.5663865546218487,
+                0.7813895399949896
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第九条 出差人员应在规定标准内选择住宿场所，住宿费凭发票在标准内据实报",
+              "bbox": [
+                0.16806722689075632,
+                0.7911282718323189,
+                0.8588235294117647,
+                0.8110807513964148
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "销。",
+              "bbox": [
+                0.12773109243697478,
+                0.816068889409516,
+                0.16806722689075632,
+                0.8360213689736119
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第十条 住宿费标准按职级和城市类别核定（单位：元/人·天）：",
+              "bbox": [
+                0.16806722689075632,
+                0.8457601008109412,
+                0.7478991596638656,
+                0.8657125803750371
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "table",
+              "text": "",
+              "bbox": [
+                0.12823529283539586,
+                0.8766626885082641,
+                0.8784874154740021,
+                0.9050474672778107
+              ],
+              "confidence": null,
+              "html": "<table><tr><td>职级</td><td>一类城市</td><td>二类城市</td><td>三类城市</td></tr></table>",
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            }
+          ]
+        },
+        {
+          "page_num": 3,
+          "source_mode": "text_layer",
+          "duration_ms": 71,
+          "width_px": 1190,
+          "height_px": 1684,
+          "blocks": [
+            {
+              "type": "table",
+              "text": "正高级: 副高级 | 520: 450 | 440: 380 | 380: 330\n正高级: 中级及以下 | 520: 400 | 440: 340 | 380: 300",
+              "bbox": [
+                0.12831932623513273,
+                0.0855106888361045,
+                0.8784033852798933,
+                0.17180521550484337
+              ],
+              "confidence": null,
+              "html": "<table><tr><td>正高级</td><td>520</td><td>440</td><td>380</td></tr><tr><td>副高级</td><td>450</td><td>380</td><td>330</td></tr><tr><td>中级及以下</td><td>400</td><td>340</td><td>300</td></tr></table>",
+              "row_texts": [
+                "正高级: 副高级 | 520: 450 | 440: 380 | 380: 330",
+                "正高级: 中级及以下 | 520: 400 | 440: 340 | 380: 300"
+              ],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "城市类别划分：",
+              "bbox": [
+                0.16806722689075632,
+                0.1804988072773623,
+                0.3092436974789916,
+                0.20045130496353547
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "（一）一类城市：北京、上海、广州、深圳、南京、武汉；",
+              "bbox": [
+                0.16806722689075632,
+                0.21019001867878748,
+                0.692436974789916,
+                0.23014251636496066
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "（二）二类城市：其他省会城市（含杭州、成都）、计划单列市及苏州、无锡、",
+              "bbox": [
+                0.16806722689075632,
+                0.23988123008021267,
+                0.8739495798319328,
+                0.25983372776638586
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "宁波、青岛、厦门；",
+              "bbox": [
+                0.12773109243697478,
+                0.2648218476574098,
+                0.3092436974789916,
+                0.284774345343583
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "（三）三类城市：其余地区。",
+              "bbox": [
+                0.16806722689075632,
+                0.29451304093675773,
+                0.43025210084033616,
+                0.31446552050085363
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "澄川市按二类城市执行。",
+              "bbox": [
+                0.16806722689075632,
+                0.3242042523381829,
+                0.3899159663865546,
+                0.3441567319022788
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第十一条 超过标准的住宿费，超出部分由个人自理。两人以上同性别出差的，原",
+              "bbox": [
+                0.16806722689075632,
+                0.35389546373960806,
+                0.8789915966386554,
+                0.37384794330370397
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "则上合住。会议、培训由主办方统一安排住宿的，凭会议通知按实际发生额报销。",
+              "bbox": [
+                0.12773109243697478,
+                0.37883608131680524,
+                0.853781512605042,
+                0.39878856088090114
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第五章 伙食补助与市内交通",
+              "bbox": [
+                0.3798319327731092,
+                0.41327788654245845,
+                0.626890756302521,
+                0.43323036610655435
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第十二条 伙食补助按出差自然（日历）天数计算，标准为每人每天 80 元。接待",
+              "bbox": [
+                0.16806722689075632,
+                0.4429690979438836,
+                0.8676571116727941,
+                0.4629215775079795
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "单位或主办方统一安排用餐的，相应扣减伙食补助。",
+              "bbox": [
+                0.12773109243697478,
+                0.46790971552108074,
+                0.5915966386554622,
+                0.48786219508517664
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第十三条 市内交通费按出差自然（日历）天数包干，标准为每人每天 80 元。接",
+              "bbox": [
+                0.16806722689075632,
+                0.49760092692250596,
+                0.8676571116727941,
+                0.5175534064866019
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "待单位提供交通工具的，不再发放。",
+              "bbox": [
+                0.12773109243697478,
+                0.5225415444997031,
+                0.4504201680672269,
+                0.542494024063799
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第六章 报销管理",
+              "bbox": [
+                0.43025210084033616,
+                0.5569833497253563,
+                0.5764705882352941,
+                0.5769358292894522
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第十四条 出差人员应在出差结束后 30 日内凭出差审批单、交通票据、住宿发票",
+              "bbox": [
+                0.16806722689075632,
+                0.5866745611267815,
+                0.8676571116727941,
+                0.6066270406908774
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "办理报销。报销资料包括：",
+              "bbox": [
+                0.12773109243697478,
+                0.6116151787039786,
+                0.3697478991596639,
+                0.6315676582680745
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "（一）经审批的出差审批单；",
+              "bbox": [
+                0.16806722689075632,
+                0.6413063901054038,
+                0.43025210084033616,
+                0.6612588696694996
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "（二）城市间交通票据；",
+              "bbox": [
+                0.16806722689075632,
+                0.670997601506829,
+                0.3899159663865546,
+                0.6909500810709249
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "（三）住宿费发票及结账水单；",
+              "bbox": [
+                0.16806722689075632,
+                0.7006888129082541,
+                0.4504201680672269,
+                0.7206412924723501
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "（四）因会议、培训出差的，附会议、培训通知。",
+              "bbox": [
+                0.16806722689075632,
+                0.7303800243096793,
+                0.611764705882353,
+                0.7503325038737753
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "有借款的，应在报销时同时冲销借款。项目出差发生的差旅费，须经项目负责人",
+              "bbox": [
+                0.16806722689075632,
+                0.7600712357111045,
+                0.8739495798319328,
+                0.7800237152752004
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "确认后计入项目成本。",
+              "bbox": [
+                0.12773109243697478,
+                0.7850118532883017,
+                0.32941176470588235,
+                0.8049643328523975
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第十五条 财务部负责审核差旅费报销的票据合规性及标准执行情况，对不符合规",
+              "bbox": [
+                0.16806722689075632,
+                0.8147030646897269,
+                0.8789915966386554,
+                0.8346555442538227
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "定的报销予以退回。部门负责人对出差事实的真实性负审核责任。",
+              "bbox": [
+                0.12773109243697478,
+                0.839643682266924,
+                0.7126050420168067,
+                0.85959616183102
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "table",
+              "text": "",
+              "bbox": [
+                0.12831932623513273,
+                0.8769002085343676,
+                0.8784033852798933,
+                0.8840260992707096
+              ],
+              "confidence": null,
+              "html": "<table><tr><td>第十六条 虚报、冒领差</td><td>旅费的，一经查实</td><td>，追回款项并按集</td><td>团有关规定处理。</td></tr></table>",
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            }
+          ]
+        },
+        {
+          "page_num": 4,
+          "source_mode": "text_layer",
+          "duration_ms": 8,
+          "width_px": 1190,
+          "height_px": 1684,
+          "blocks": [
+            {
+              "type": "text",
+              "text": "第七章 附则",
+              "bbox": [
+                0.4504201680672269,
+                0.08714964044348927,
+                0.5563025210084034,
+                0.10710213812966245
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第十七条 本办法由财务部负责解释。",
+              "bbox": [
+                0.16806722689075632,
+                0.11684085184491445,
+                0.4957983193277311,
+                0.13679334953108763
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "第十八条 本办法自 2021 年 1 月 1 日起施行。",
+              "bbox": [
+                0.16806722689075632,
+                0.14653207230737827,
+                0.5626353031446953,
+                0.16648456999355143
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            },
+            {
+              "type": "text",
+              "text": "澄川建筑工程设计集团有限公司财务部　　2020年12月18日印发",
+              "bbox": [
+                0.12773109243697478,
+                0.18782659607658478,
+                0.594151293329832,
+                0.20445367446138288
+              ],
+              "confidence": null,
+              "html": null,
+              "row_texts": [],
+              "caption": null,
+              "linear_text": null
+            }
+          ]
+        }
+      ],
+      "total_duration_ms": 148,
+      "quality_warnings": []
+    }
+  },
+  {
+    "file": "质量手册 QM-2025（扫描）.pdf",
+    "pages": 8,
+    "text_chars": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+]

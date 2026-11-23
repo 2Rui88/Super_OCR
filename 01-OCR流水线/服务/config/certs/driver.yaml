@@ -1,0 +1,50 @@
+# 驾驶证（正页）
+type_id: driver
+name: 驾驶证
+
+classification:
+  required: [驾驶证]
+  positive: [机动车驾驶证, 证号, 初次领证日期, 准驾车型, 国籍, 驾驶证号码]
+  negative: [营业执照, 统一社会信用代码]
+
+fields:
+  - name: 证号
+    anchors: [证号, 驾驶证号, 身份证号]
+    type: chinese_id                # 驾驶证证号即身份证号，同规则校验
+    pattern: '[0-9Xx]{15,18}'
+  - name: 姓名
+    anchors: [姓名]
+  - name: 性别
+    anchors: [性别]
+    type: enum
+    allowed: [男, 女]
+  - name: 国籍
+    anchors: [国籍]
+  - name: 住址
+    anchors: [住址, 地址]
+    multi_line: true
+  - name: 出生日期
+    anchors: [出生日期, 出生]
+    type: date
+  - name: 初次领证日期
+    anchors: [初次领证日期, 初次领证]
+    type: date
+  - name: 准驾车型
+    anchors: [准驾车型, 准驾车型代号]
+    pattern: '[A-Z][0-9]?'
+  - name: 有效期限
+    anchors: [有效期限, 有效期限至, 有效期]
+    type: period
+
+cross_checks:
+  - kind: idcard_birth_match
+    id_field: 证号
+    date_field: 出生日期
+  - kind: idcard_gender_match
+    id_field: 证号
+    gender_field: 性别
+  - kind: period_order
+    field: 有效期限
+  - kind: date_order                # 初次领证 <= 有效期起
+    early: 初次领证日期
+    late: 有效期限

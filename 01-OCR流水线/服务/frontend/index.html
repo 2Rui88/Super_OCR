@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OCR 流水线</title>
+<style>
+  :root{
+    --bg:#f4f6f9;--card:#fff;--ink:#1c2333;--ink2:#5a6478;--line:#e3e8f0;
+    --primary:#2f6fed;--ok:#178a4c;--warn:#c77d0a;--err:#d5433c;--muted:#8a93a6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:0 20px;display:flex;align-items:center;gap:18px;height:52px}
+  header h1{font-size:16px;margin:0 8px 0 0}
+  nav{display:flex;gap:4px}
+  nav button{border:0;background:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px;color:var(--ink2)}
+  nav button.on{background:#e8effe;color:var(--primary);font-weight:600}
+  #health{margin-left:auto;font-size:12px;color:var(--muted)}
+  #health b{font-weight:600}
+  #health .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--err)}
+  #health.ok .dot{background:var(--ok)}
+  main{max-width:1280px;margin:18px auto;padding:0 20px}
+  .tab{display:none}
+  .tab.on{display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .card h2{font-size:14px;margin:0 0 12px;color:var(--ink)}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:340px}
+  button.act{background:var(--primary);color:#fff;border:0;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:13px}
+  button.ghost{background:#fff;color:var(--primary);border:1px solid var(--primary);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  select,input[type=number],input[type=text]{border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;background:#fff}
+  .drop{border:1.5px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);cursor:pointer}
+  .drop.hover{border-color:var(--primary);color:var(--primary)}
+  .badge{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px}
+  .b-ok{background:#e6f5ec;color:var(--ok)} .b-warn{background:#fdf2e2;color:var(--warn)}
+  .b-err{background:#fdeae8;color:var(--err)} .b-mute{background:#eef1f6;color:var(--muted)}
+  .b-info{background:#e8effe;color:var(--primary)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{color:var(--ink2);font-weight:500;text-align:left;border-bottom:1px solid var(--line);padding:6px 8px;white-space:nowrap}
+  td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+  tr.hl{background:#f3f7ff}
+  .canvas-wrap{position:relative;display:inline-block;max-width:100%}
+  #imgCert,#bImgCert{max-width:100%;border-radius:8px;display:block}
+  #overlay,#bOverlay{position:absolute;inset:0;pointer-events:none}
+  #imgDoc,#dImgDoc{max-width:100%;border-radius:8px;display:block}
+  #docOverlay,#dOverlay{position:absolute;inset:0;pointer-events:none}
+  .issues{margin-top:10px;background:#fdf6f5;border:1px solid #f5d9d6;border-radius:8px;padding:10px 12px;color:var(--err);font-size:13px}
+  pre.json{background:#0f1522;color:#c8d3f5;border-radius:10px;padding:14px;font-size:12px;overflow:auto;max-height:420px}
+  .progress{height:8px;background:#e8ecf3;border-radius:6px;overflow:hidden;margin:8px 0}
+  .progress>i{display:block;height:100%;background:var(--primary);transition:width .4s}
+  .pages{display:flex;flex-wrap:wrap;gap:8px}
+  .page-chip{border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .page-chip.on{border-color:var(--primary);color:var(--primary);background:#f3f7ff}
+  .docview{max-height:460px;overflow:auto;background:#fafbfd;border:1px solid var(--line);border-radius:8px;padding:14px;font-size:13px;white-space:pre-wrap}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .stat{background:#f6f8fc;border-radius:10px;padding:10px 16px;min-width:110px}
+  .stat b{display:block;font-size:20px}
+  .stat span{font-size:12px;color:var(--muted)}
+  .muted{color:var(--muted)} .ok{color:var(--ok)} .err{color:var(--err)} .warn{color:var(--warn)}
+  /* 文档：结果标签页 + 逐页状态行 */
+  .rtabs{display:flex;gap:2px;border-bottom:1px solid var(--line)}
+  .rtabs button{border:0;background:none;padding:6px 14px;font-size:13px;cursor:pointer;color:var(--ink2);border-bottom:2px solid transparent}
+  .rtabs button.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+  .pagerows{margin-top:10px}
+  .pagerow{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:7px 12px;margin-bottom:6px;font-size:13px}
+  .pagerow.clickable{cursor:pointer}
+  .pagerow.open{border-radius:8px 8px 0 0;margin-bottom:0}
+  .pdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .pdot.done{background:var(--ok)} .pdot.run{background:var(--primary)} .pdot.wait{background:#c4cbd8}
+  .pagerow .pmeta{color:var(--muted);font-size:12px}
+  .pagerow .parr{margin-left:auto;color:var(--muted)}
+  .pagedetail{display:none;background:#f6f8fc;border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;padding:8px 14px;margin-bottom:6px;font-size:12px;color:var(--ink2)}
+  /* 识别页：最近上传历史 */
+  .recent-item{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font-size:12px}
+  .recent-item:hover{background:#f3f7ff}
+  .recent-item.on{border-color:var(--primary);background:#f3f7ff}
+  .recent-item .rname{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .recent-item .rmeta{display:flex;align-items:center;gap:6px;color:var(--muted);margin-top:2px}
+  .recent-item .rarr{margin-left:auto;color:var(--muted)}
+  .rdot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+  .rdot.ok{background:var(--ok)} .rdot.warn{background:#e8930c}
+  /* 文档：可点击文本块 + 原文页预览 */
+  .dpagehead{color:var(--muted);font-size:12px;margin:12px 0 4px}
+  .dblock{cursor:pointer;border-radius:6px;padding:2px 6px;margin:2px -6px;white-space:pre-wrap}
+  .dblock:hover{background:#e8effe}
+  .dblock.sel{background:#fdeeee;outline:1px solid #f0b9b4}
+  .dblock .btag{font-size:11px;color:var(--primary);margin-right:6px}
+  .dblock .ttype{color:var(--muted);font-size:11px;margin-right:6px}
+  #toast{position:fixed;bottom:24px;right:24px;background:#1c2333;color:#fff;border-radius:10px;padding:10px 16px;font-size:13px;display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>OCR 流水线</h1>
+  <nav id="nav">
+    <button data-tab="recognize" class="on">识别</button>
+    <button data-tab="document">文档</button>
+    <button data-tab="batch">证件批量</button>
+    <button data-tab="docbatch">文档批量</button>
+    <button data-tab="eval">评测</button>
+    <button data-tab="certcfg">证件配置</button>
+  </nav>
+  <div id="health"><span class="dot"></span><b>检查中…</b></div>
+</header>
+
+<main>
+  <!-- ============ 识别 ============ -->
+  <section class="tab on" id="tab-recognize">
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <div class="drop" id="dropCard">拖入证件图片，或点击选择（JPG/PNG/BMP/WebP ≤20MB）</div>
+        <div style="flex:0 0 auto;min-width:260px">
+          <label>证件类型
+            <select id="certType" style="margin-left:8px">
+              <option value="">自动判断</option>
+              <option value="id_front">身份证正面</option>
+              <option value="id_back">身份证反面</option>
+              <option value="license">营业执照</option>
+              <option value="driver">驾驶证</option>
+            </select>
+          </label>
+          <div style="margin-top:10px"><button class="act" id="btnRecognize" disabled>上传识别</button></div>
+        </div>
+      </div>
+      <input type="file" id="fileCard" accept=".jpg,.jpeg,.png,.bmp,.webp" hidden>
+    </div>
+    <div class="row">
+      <div class="card" style="flex:0 0 230px;min-width:230px">
+        <h2>最近</h2>
+        <div id="recentList"><div class="muted" style="font-size:12px">暂无记录</div></div>
+      </div>
+      <div class="card">
+        <h2>证件图（字段框叠加，点击字段行高亮）</h2>
+        <div class="canvas-wrap" id="certWrap" style="display:none">
+          <img id="imgCert" alt="证件预览"><canvas id="overlay"></canvas>
+        </div>
+        <div style="margin-top:8px">
+          <button class="ghost" id="btnRect" style="display:none">摆正视图（对齐字段框）</button>
+        </div>
+        <div id="certPlaceholder" class="muted">上传后在此显示</div>
+      </div>
+      <div class="card">
+        <h2 id="certTitle">字段</h2>
+        <div id="certMeta" class="muted" style="font-size:12px;margin-bottom:8px"></div>
+        <div id="certFields"></div>
+        <div id="certIssues"></div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="ghost" id="btnCertJson">JSON</button>
+          <a class="ghost" id="btnCertDownload" download="识别结果.json" style="display:none;text-decoration:none;padding:6px 14px">导出</a>
+        </div>
+        <pre class="json" id="certJson" style="display:none"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 文档 ============ -->
+  <section class="tab" id="tab-document">
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <div class="drop" id="dropDoc">拖入 PDF / Word / Excel / PPT（≤20MB）</div>
+        <div style="flex:0 0 auto">
+          <div class="muted" style="font-size:12px">统一链路：Office 自动转 PDF，逐页 PP-StructureV3 识别</div>
+          <div style="margin-top:10px"><button class="act" id="btnDoc" disabled>提交识别</button></div>
+        </div>
+      </div>
+      <input type="file" id="fileDoc" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" hidden>
+    </div>
+    <div class="card" id="docProgressCard" style="display:none">
+      <h2>任务进度 <span id="docPhase" class="muted" style="font-weight:400"></span></h2>
+      <div class="progress"><i id="docBar" style="width:0%"></i></div>
+      <div class="pagerows" id="docPageRows"></div>
+    </div>
+    <div class="row">
+      <div class="card" id="docImageCard" style="display:none">
+        <h2 style="display:flex;align-items:center;gap:10px">
+          原文页 <span id="docPageNo" class="muted" style="font-weight:400"></span>
+          <span style="margin-left:auto;display:flex;gap:6px">
+            <button class="ghost" id="btnDocPrev" style="padding:4px 10px">‹</button>
+            <button class="ghost" id="btnDocNext" style="padding:4px 10px">›</button>
+          </span>
+        </h2>
+        <div class="canvas-wrap" id="docWrap" style="display:none">
+          <img id="imgDoc" alt="页面预览"><canvas id="docOverlay"></canvas>
+        </div>
+        <div id="docImgPlaceholder" class="muted">识别完成后在此显示</div>
+      </div>
+      <div class="card" id="docResultCard" style="display:none">
+        <div class="rtabs">
+          <button data-rtab="text" class="on">文字</button>
+          <button data-rtab="md">Markdown</button>
+          <button data-rtab="json">JSON</button>
+          <span style="margin-left:auto;display:flex;gap:8px;align-items:center;padding-bottom:4px">
+            <button class="ghost" id="btnDocOrder">按阅读顺序：开</button>
+            <button class="ghost" id="btnDocCopy">复制全文</button>
+            <button class="act" id="btnDocDownload">下载</button>
+          </span>
+        </div>
+        <div id="docResult" class="docview"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 批量 ============ -->
+  <section class="tab" id="tab-batch">
+    <div class="card">
+      <div class="drop" id="dropBatch">拖入多张证件图片，一次排队处理；单个失败不影响其他</div>
+      <input type="file" id="fileBatch" accept=".jpg,.jpeg,.png,.bmp,.webp" multiple hidden>
+    </div>
+    <div class="card" id="batchCard" style="display:none">
+      <h2 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        批次 <select id="batchSelect"></select>
+        <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="ghost" id="btnRetry">重试失败的</button>
+          <button class="ghost" id="btnNewBatch">+ 新批次</button>
+          <a class="act" id="btnExportXlsx" style="text-decoration:none;padding:7px 16px;font-size:13px" target="_blank">⬇ 导出 Excel</a>
+          <a class="ghost" id="btnExportJson" style="text-decoration:none;padding:6px 14px" target="_blank">导出 JSON</a>
+        </span>
+      </h2>
+      <div class="stats" id="batchStats"></div>
+      <div class="rtabs" id="batchFilters"></div>
+      <table id="batchTable"><thead><tr>
+        <th>文件</th><th>识别类型</th><th>字段</th><th>问题</th><th>用时</th><th>状态</th><th>操作</th>
+      </tr></thead><tbody></tbody></table>
+      <div id="batchPager" style="display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px"></div>
+    </div>
+    <div class="card" id="batchDetailCard" style="display:none">
+      <div class="row" style="align-items:center">
+        <h2 id="bCertTitle" style="margin:0">字段</h2>
+        <span style="flex:1"></span>
+        <button class="ghost" id="bBtnClose">✕ 关闭</button>
+      </div>
+      <div class="muted" id="bCertMeta" style="font-size:12px;margin:6px 0 8px"></div>
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div class="canvas-wrap" id="bCertWrap" style="display:none">
+            <img id="bImgCert" alt="证件预览"><canvas id="bOverlay"></canvas>
+          </div>
+          <div class="muted" id="bCertPlaceholder" style="font-size:12px">加载原图中…</div>
+          <div style="margin-top:8px"><button class="ghost" id="bBtnRect" style="display:none">摆正视图（对齐字段框）</button></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div id="bCertFields"></div>
+          <div id="bCertIssues"></div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button class="ghost" id="bBtnJson">JSON</button>
+            <a class="ghost" id="bBtnDownload" download="识别结果.json" style="display:none;text-decoration:none;padding:6px 14px">导出</a>
+          </div>
+          <pre class="json" id="bCertJson" style="display:none"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 文档批量 ============ -->
+  <section class="tab" id="tab-docbatch">
+    <div class="card">
+      <div class="drop" id="dropDocBatch">拖入多个 PDF / Word / Excel / PPT（每个 ≤20MB），一次排队并行识别；单个失败不影响其他</div>
+      <input type="file" id="fileDocBatch" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" multiple hidden>
+    </div>
+    <div class="card" id="docBatchCard" style="display:none">
+      <h2 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        文档批次 <select id="docBatchSelect"></select>
+        <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="ghost" id="btnDocBatchRetry">重试失败的</button>
+          <button class="ghost" id="btnDocBatchNew">+ 新批次</button>
+          <a class="ghost" id="btnDocBatchExport" style="text-decoration:none;padding:6px 14px" target="_blank">导出 JSON</a>
+        </span>
+      </h2>
+      <div class="stats" id="docBatchStats"></div>
+      <div class="rtabs" id="docBatchFilters"></div>
+      <table id="docBatchTable"><thead><tr>
+        <th>文件</th><th>进度</th><th>页数·块数</th><th>用时</th><th>状态</th><th>操作</th>
+      </tr></thead><tbody></tbody></table>
+      <div id="docBatchPager" style="display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px"></div>
+    </div>
+    <div class="card" id="docBatchDetailCard" style="display:none">
+      <div class="row" style="align-items:center">
+        <h2 id="dDocTitle" style="margin:0">文档详情</h2>
+        <span class="muted" id="dDocMeta" style="font-size:12px;margin-left:10px"></span>
+        <span style="flex:1"></span>
+        <button class="ghost" id="dBtnClose">✕ 关闭</button>
+      </div>
+      <div class="progress" style="margin:10px 0 0"><i id="dDocBar" style="width:0%"></i></div>
+      <div class="row" style="align-items:flex-start;margin-top:10px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <b>原文页</b><span class="muted" id="dDocPageNo" style="font-size:12px"></span>
+            <span style="margin-left:auto;display:flex;gap:6px">
+              <button class="ghost" id="dBtnDocPrev" style="padding:4px 10px">‹</button>
+              <button class="ghost" id="dBtnDocNext" style="padding:4px 10px">›</button>
+            </span>
+          </div>
+          <div class="canvas-wrap" id="dDocWrap" style="display:none">
+            <img id="dImgDoc" alt="页面预览"><canvas id="dOverlay"></canvas>
+          </div>
+          <div id="dDocImgPlaceholder" class="muted" style="font-size:12px">识别完成后在此显示</div>
+          <div class="pagerows" id="dDocPageRows" style="margin-top:10px"></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="rtabs" id="dDocRtabs">
+            <button data-rtab="text" class="on">文字</button>
+            <button data-rtab="md">Markdown</button>
+            <button data-rtab="json">JSON</button>
+            <span style="margin-left:auto;display:flex;gap:8px;align-items:center;padding-bottom:4px">
+              <button class="ghost" id="dBtnDocOrder">按阅读顺序：开</button>
+              <button class="ghost" id="dBtnDocCopy">复制全文</button>
+              <button class="act" id="dBtnDocDownload">下载</button>
+            </span>
+          </div>
+          <div id="dDocResult" class="docview"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 评测 ============ -->
+  <section class="tab" id="tab-eval">
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <select id="evalPreset" style="min-width:220px"></select>
+        <label class="ghost" style="cursor:pointer;padding:6px 14px">⬆ 导入标准答案 JSON（可选，覆盖预设自带）
+          <input type="file" id="evalGt" accept=".json" hidden>
+        </label>
+        <span class="muted" id="evalGtName" style="font-size:12px"></span>
+        <span style="flex:1"></span>
+        <button class="act" id="btnEval">▶ 开始评测</button>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:8px">
+        口径：分类错误与漏字段都计错；错误字段含标准答案 vs 识别值对照，校验发现列绿点=已标复核
+      </div>
+    </div>
+    <div class="card" id="evalCard" style="display:none">
+      <h2>评测报表 <span id="evalMeta" class="muted" style="font-weight:400"></span></h2>
+      <div class="stats" id="evalStats"></div>
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:0 0 300px"><h2 style="font-size:13px;color:var(--ink2)">按证件类型</h2><table id="evalByType"><thead><tr><th>类型</th><th>样本</th><th>字段准确率</th></tr></thead><tbody></tbody></table></div>
+        <div style="flex:1;min-width:0"><h2 style="font-size:13px;color:var(--ink2)">错误字段 <span id="evalWrongCount" class="muted" style="font-weight:400"></span></h2><table id="evalWrong"><thead><tr><th>文件</th><th>字段</th><th>标准答案</th><th>识别值</th><th>校验发现</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <h2 style="font-size:13px;color:var(--ink2);margin-top:6px">按图片质量条件的逐张准确率</h2>
+      <div id="evalBars"></div>
+    </div>
+  </section>
+
+  <!-- ============ 证件配置 ============ -->
+  <section class="tab" id="tab-certcfg">
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <h2 style="margin:0">编辑证件 YAML</h2>
+        <select id="ccType" style="margin-left:12px"></select>
+        <span class="muted" id="ccMeta" style="font-size:12px"></span>
+        <span style="flex:1"></span>
+        <a class="ghost" id="ccExport" style="text-decoration:none;padding:6px 14px" download>导出生效 YAML</a>
+      </div>
+      <div class="row" style="margin-top:10px;align-items:flex-start">
+        <textarea id="ccYaml" spellcheck="false"
+          style="flex:1;min-width:0;min-height:400px;font-family:Consolas,monospace;font-size:12.5px;line-height:1.55;padding:10px;border:1px solid var(--line);border-radius:8px"></textarea>
+        <div style="flex:0 0 280px">
+          <button class="act" id="ccSave" style="width:100%">① 校验并保存草稿</button>
+          <div class="muted" style="font-size:12px;margin:12px 0 6px">
+            ② 开始重跑：用默认测试集对该证件类全链路重识别并回测（验证用，可选）
+          </div>
+          <button class="act" id="ccTrial" style="width:100%" disabled>② 开始重跑</button>
+          <div class="muted" style="font-size:12px;margin:12px 0 6px">
+            ③ 保存草稿后可操作；重跑不重跑都不影响上线决定
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="act" id="ccConfirm" style="flex:1" disabled>确认上线</button>
+            <button class="ghost" id="ccCancelTrial" style="flex:1" disabled>取消上线</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>重跑记录</h2>
+      <table id="ccTrials"><thead><tr><th>重跑编号</th><th>文件</th><th>判定</th><th>操作</th></tr></thead><tbody></tbody></table>
+      <div id="ccRecPager" style="display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px"></div>
+    </div>
+    <div class="card" id="ccReportCard" style="display:none">
+      <h2 id="ccReportTitle">前后对比</h2>
+      <div id="ccProgress" class="muted" style="font-size:13px"></div>
+      <div id="ccFileBody"></div>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const API = "/api/v1";
+let toastTimer;
+function toast(msg, bad) {
+  const t = $("toast");
+  t.textContent = msg; t.style.background = bad ? "#a53731" : "#1c2333"; t.style.display = "block";
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.display = "none", 2600);
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function bjTime(iso) {  // 服务端存 UTC ISO → 北京时间显示
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d)) return String(iso);
+  return new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", year: "numeric",
+    month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })
+    .format(d).replace(/\//g, "-");
+}
+
+/* ---------- 页签 ---------- */
+document.querySelectorAll("#nav button").forEach(btn => btn.onclick = () => {
+  document.querySelectorAll("#nav button, .tab").forEach(el => el.classList.remove("on"));
+  btn.classList.add("on"); $("tab-" + btn.dataset.tab).classList.add("on");
+});
+function switchTab(name) { document.querySelector(`#nav button[data-tab=${name}]`).click(); }
+
+/* ---------- 健康 ---------- */
+async function refreshHealth() {
+  try {
+    const d = await (await fetch(`${API}/health`)).json();
+    const alive = (d.components.workers || []).filter(w => w.alive).length;
+    const h = $("health");
+    h.classList.toggle("ok", d.status === "ok");
+    h.innerHTML = `<span class="dot"></span><b>${d.status === "ok" ? "模型在线" : d.status}</b>` +
+      ` · worker ${alive}/${d.components.workers.length} · SQLite ${d.components.sqlite_writable ? "正常" : "异常"}`;
+  } catch { $("health").innerHTML = `<span class="dot"></span><b>服务不可达</b>`; }
+}
+refreshHealth(); setInterval(refreshHealth, 8000);
+
+/* ---------- 通用上传 ---------- */
+function wireDrop(dropId, inputId, onFiles, {multiple = false} = {}) {
+  const drop = $(dropId), input = $(inputId);
+  drop.onclick = () => input.click();
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("hover"); };
+  drop.ondragleave = () => drop.classList.remove("hover");
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove("hover"); onFiles(e.dataTransfer.files); };
+  input.onchange = () => onFiles(input.files);
+}
+
+/* ---------- 识别 ---------- */
+let certFile = null;
+wireDrop("dropCard", "fileCard", files => {
+  if (!files.length) return;
+  if (files.length > 1) { toast("多文件已转批量页"); return wireBatchFiles(files); }
+  certFile = files[0];
+  $("dropCard").textContent = `已选择：${certFile.name}（${(certFile.size/1024).toFixed(0)} KB）`;
+  $("btnRecognize").disabled = false;
+});
+const DROP_CARD_HINT = "拖入证件图片，或点击选择（JPG/PNG/BMP/WebP ≤20MB）";
+$("btnRecognize").onclick = async () => {
+  const form = new FormData();
+  form.append("file", certFile);
+  const type = $("certType").value; if (type) form.append("type", type);
+  form.append("wait", "true");
+  $("btnRecognize").disabled = true; $("btnRecognize").textContent = "识别中…";
+  $("dropCard").textContent = DROP_CARD_HINT;   // 提交即复位，不显示处理中的文件名
+  const started = performance.now();            // 端到端计时：从上传发起到最终结果
+  try {
+    const resp = await fetch(`${API}/cards`, {method: "POST", body: form});
+    const body = await resp.json();
+    let envelope;
+    if (resp.status === 202) {  // 超时转异步：继续轮询
+      const done = await pollTask(body.task_id, p => {});
+      envelope = done.result;
+    } else if (resp.status === 200) envelope = body;
+    else { toast(body.detail?.message || `识别失败（${resp.status}）`, true); return; }
+    const elapsed = (performance.now() - started) / 1000;
+    pushRecent(envelope, certFile, elapsed);
+    renderCert(envelope, URL.createObjectURL(certFile), elapsed);
+  } catch (e) { toast("请求失败：" + e.message, true); }
+  $("btnRecognize").disabled = false; $("btnRecognize").textContent = "上传识别";
+};
+
+/* ---------- 最近上传历史（浏览器本地） ---------- */
+const RECENT_KEY = "ocrRecentCards", RECENT_MAX = 20;
+function loadRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]"); } catch { return []; }
+}
+function saveRecent(list) { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); }
+function pushRecent(envelope, file, elapsed) {
+  const r = envelope.result;
+  const isCard = envelope.kind === "card";
+  const entry = {
+    sha: r.file_sha256, ext: (file.name.match(/\.(\w+)$/) || [])[1] || "jpg",
+    name: file.name, kind: envelope.kind,
+    typeCn: isCard ? r.doc_type_cn : "文档图片",
+    issues: isCard ? r.fields.filter(f => f.needs_review).length : 0,
+    elapsed, ts: Date.now(), envelope,
+  };
+  const list = loadRecent().filter(x => x.sha !== entry.sha);  // 同内容重识别：置顶更新
+  list.unshift(entry);
+  saveRecent(list.slice(0, RECENT_MAX));
+  renderRecent(entry.sha);
+}
+function renderRecent(activeSha) {
+  const list = loadRecent();
+  $("recentList").innerHTML = list.length ? list.map(x => `
+    <div class="recent-item${x.sha === activeSha ? " on" : ""}" data-sha="${x.sha}">
+      <div class="rname" title="${esc(x.name)}">${esc(x.name)}</div>
+      <div class="rmeta"><span class="rdot ${x.issues ? "warn" : "ok"}"></span>
+        ${esc(x.typeCn)}${x.issues ? ` · ${x.issues} 项待复核` : ""} · ${x.elapsed.toFixed(1)}s
+        <span class="rarr">›</span></div>
+    </div>`).join("")
+    : `<div class="muted" style="font-size:12px">暂无记录</div>`;
+  $("recentList").querySelectorAll(".recent-item").forEach(el => el.onclick = () => {
+    renderRecent(el.dataset.sha);
+    const item = loadRecent().find(x => x.sha === el.dataset.sha);
+    if (!item) return;
+    renderCert(item.envelope, `${API}/files/${item.sha}.${item.ext}`, item.elapsed);
+  });
+}
+renderRecent();
+
+async function pollTask(taskId, onProgress) {
+  let delay = 1000, failures = 0;
+  for (;;) {
+    let task;
+    try {
+      task = await (await fetch(`${API}/tasks/${taskId}`)).json();
+      failures = 0;
+    } catch (e) {                     // 网络抖动/keep-alive 断连：重试，连续 5 次才放弃
+      if (++failures > 5) throw new Error("轮询中断：" + e.message);
+      await new Promise(r => setTimeout(r, 1500));
+      continue;
+    }
+    onProgress(task);
+    if (task.status === "done") return task;
+    if (task.status === "failed") throw new Error(task.error_message || task.error_code);
+    await new Promise(r => setTimeout(r, delay));
+    delay = Math.min(delay * 1.4, 8000);
+  }
+}
+
+function renderCert(envelope, imageUrl, elapsed) {
+  certRender.render(envelope, imageUrl, elapsed);
+}
+
+/* 证件详情渲染器（识别页 / 批量页共用实例）：图 + 字段框叠加 + 字段表 + 问题。
+   ids 映射到该页的一组元素 id；摆正视图状态：字段 bbox 属于摆正图坐标系，
+   仅在摆正视图下绘制；无摆正图的结果沿用原图画框，行为不变。 */
+function makeCertRenderer(ids) {
+  let result = null, blobUrl = null;
+  const view = { originalUrl: null, rectUrl: null, rectOn: false, active: null };
+  const showRect = () => !view.rectUrl || view.rectOn;
+
+  function drawBoxes(activeIndex) {
+    const img = $(ids.img), canvas = $(ids.overlay);
+    if (!img.naturalWidth) return;
+    canvas.width = img.clientWidth; canvas.height = img.clientHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!result || result.kind !== "card") return;
+    result.result.fields.forEach((f, i) => {
+      if (!f.bbox) return;
+      const [x1, y1, x2, y2] = f.bbox;
+      ctx.lineWidth = i === activeIndex ? 3 : 1.5;
+      ctx.strokeStyle = i === activeIndex ? "#d5433c" : "rgba(47,111,237,.85)";
+      ctx.strokeRect(x1 * canvas.width, y1 * canvas.height,
+                     (x2 - x1) * canvas.width, (y2 - y1) * canvas.height);
+    });
+  }
+  function redraw() {
+    if (showRect()) drawBoxes(view.active ?? null);
+    else { const c = $(ids.overlay); c.getContext("2d").clearRect(0, 0, c.width, c.height); }
+  }
+  function applyView() {
+    const url = view.rectOn && view.rectUrl ? view.rectUrl : view.originalUrl;
+    $(ids.btnRect).textContent = view.rectOn ? "查看原图" : "摆正视图（对齐字段框）";
+    if ($(ids.img).src !== url) { $(ids.img).src = url; }  // onload → redraw
+    else redraw();
+  }
+  $(ids.btnRect).onclick = () => { view.rectOn = !view.rectOn; view.active = null; applyView(); };
+  $(ids.btnJson).onclick = () => {
+    const pre = $(ids.json);
+    pre.style.display = pre.style.display === "none" ? "block" : "none";
+  };
+
+  function render(envelope, imageUrl, elapsed) {
+    result = envelope;
+    view.originalUrl = imageUrl;
+    view.rectUrl = (envelope.kind === "card" && envelope.result.rectified_file)
+      ? `${API}/files/${envelope.result.rectified_file}` : null;
+    view.rectOn = false; view.active = null;
+    $(ids.btnRect).style.display = view.rectUrl ? "inline-block" : "none";
+    $(ids.img).onerror = () => {  // 历史回看时原件可能已清理：字段照常显示，仅图缺失
+      $(ids.wrap).style.display = "none";
+      $(ids.placeholder).style.display = "block";
+      $(ids.placeholder).textContent = "原图不可用（可能已被清理）";
+    };
+    $(ids.img).onload = () => {
+      $(ids.placeholder).style.display = "none";
+      $(ids.wrap).style.display = "inline-block";
+      redraw();
+    };
+    $(ids.img).src = imageUrl;
+    $(ids.placeholder).textContent = "加载原图中…"; $(ids.placeholder).style.display = "block";
+
+    const elapsedText = typeof elapsed === "number" ? ` · 用时 ${elapsed.toFixed(1)} 秒` : "";
+    if (envelope.kind !== "card") {  // 路由成文档
+      const text = (envelope.result.pages || []).map(p =>
+        p.blocks.map(b => b.text).join("\n")).join("\n\n");
+      $(ids.title).textContent = "识别结果（文档）";
+      $(ids.meta).innerHTML = `<span class="badge b-warn">${esc(envelope.reason)}</span>${elapsedText}`;
+      $(ids.fields).innerHTML = `<div class="docview">${esc(text)}</div>`;
+      $(ids.issues).innerHTML = "";
+    } else {
+      const r = envelope.result;
+      const bad = r.fields.filter(f => f.needs_review).length;
+      $(ids.title).textContent = `字段 · ${r.fields.length} 项${bad ? `，${bad} 项有问题` : ""}`;
+      $(ids.meta).innerHTML =
+        `${esc(r.doc_type_cn)}${elapsedText}` +
+        (r.doc_type === "unknown" ? ` <span class="badge b-err">未识别出证件类型</span>` : "");
+      $(ids.fields).innerHTML = `<table><thead><tr><th>字段</th><th>识别值</th><th>置信度</th><th>校验</th></tr></thead><tbody>` +
+        r.fields.map((f, i) => `<tr data-i="${i}">
+          <td>${esc(f.name)}</td><td>${esc(f.value)}</td><td>${f.confidence}</td>
+          <td>${f.needs_review ? `<span class="badge b-err">${esc(f.validation.errors.join("；") || "置信度低")}</span>`
+                               : `<span class="badge b-ok">通过</span>`}</td></tr>`).join("") +
+        `</tbody></table>`;
+      $(ids.fields).querySelectorAll("tbody tr").forEach(tr => tr.onclick = () => {
+        $(ids.fields).querySelectorAll("tr").forEach(x => x.classList.remove("hl"));
+        tr.classList.add("hl");
+        view.active = +tr.dataset.i;
+        // 字段框属于摆正图坐标系：点击字段行时自动切到摆正视图（若有）
+        if (view.rectUrl && !view.rectOn) { view.rectOn = true; applyView(); }
+        else redraw();
+      });
+      $(ids.issues).innerHTML = r.issues.length ? `<div class="issues">${r.issues.map(esc).join("<br>")}</div>` : "";
+    }
+    const json = JSON.stringify(envelope, null, 2);
+    $(ids.json).textContent = json;
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    blobUrl = URL.createObjectURL(new Blob([json], {type: "application/json"}));
+    $(ids.download).href = blobUrl; $(ids.download).style.display = "inline-block";
+    refreshHealth();
+  }
+  return { render, redraw };
+}
+
+const certRender = makeCertRenderer({
+  img: "imgCert", overlay: "overlay", btnRect: "btnRect", wrap: "certWrap",
+  placeholder: "certPlaceholder", title: "certTitle", meta: "certMeta",
+  fields: "certFields", issues: "certIssues", json: "certJson",
+  btnJson: "btnCertJson", download: "btnCertDownload",
+});
+const batchCertRender = makeCertRenderer({
+  img: "bImgCert", overlay: "bOverlay", btnRect: "bBtnRect", wrap: "bCertWrap",
+  placeholder: "bCertPlaceholder", title: "bCertTitle", meta: "bCertMeta",
+  fields: "bCertFields", issues: "bCertIssues", json: "bCertJson",
+  btnJson: "bBtnJson", download: "bBtnDownload",
+});
+window.addEventListener("resize", () => {
+  certRender.redraw(); batchCertRender.redraw();
+  docRender.redraw(); docBatchRender.redraw();
+});
+
+/* ---------- 文档 ---------- */
+let docFile = null;
+wireDrop("dropDoc", "fileDoc", files => {
+  if (!files.length) return;
+  docFile = files[0];
+  $("dropDoc").textContent = `已选择：${docFile.name}`;
+  $("btnDoc").disabled = false;
+});
+$("btnDoc").onclick = async () => {
+  const form = new FormData(); form.append("file", docFile);
+  $("btnDoc").disabled = true;
+  try {
+    const resp = await fetch(`${API}/documents`, {method: "POST", body: form});
+    const body = await resp.json();
+    if (!resp.ok) throw new Error(body.detail?.message || `上传失败（${resp.status}）`);
+    $("docProgressCard").style.display = "block"; $("docResultCard").style.display = "none";
+    // 清场：上一份文档的原文页预览与旧页图请求一并撤掉，避免新任务期间残留旧内容
+    $("docImageCard").style.display = "none";
+    $("docWrap").style.display = "none";
+    $("imgDoc").removeAttribute("src");
+    $("docPageRows").innerHTML = `<div class="pagerow"><span class="pdot wait"></span><b>已排队</b><span class="pmeta">等待 worker 领取</span></div>`;
+    const task = await pollTask(body.task_id, t => {
+      $("docPhase").textContent = `${t.phase || t.status}（${Math.round((t.progress||0)*100)}%）`;
+      $("docBar").style.width = `${Math.round((t.progress||0)*100)}%`;
+      renderPageProgress(t);
+    });
+    docRender.render(task.result, docFile.name);
+  } catch (e) { toast("文档识别失败：" + e.message, true); }
+  $("btnDoc").disabled = false;
+};
+
+/* 逐页真实状态：进行中来自 worker 逐页上报，完成后来自识别结果 */
+function renderPageProgress(t) {
+  const pp = t.pages_progress, box = $("docPageRows");
+  if (!pp || !pp.total) {
+    box.innerHTML = `<div class="pagerow"><span class="pdot run"></span><b>处理中</b><span class="pmeta">${esc(t.phase || "")}</span></div>`;
+    return;
+  }
+  const done = pp.pages || [];
+  let html = done.map(m => `<div class="pagerow"><span class="pdot done"></span><b>第${m.page}页</b>
+    <span class="pmeta">OCR · ${m.blocks} 块${m.tables ? ` · ${m.tables} 张表` : ""} · ${(m.duration_ms/1000).toFixed(1)}s${m.warning ? ` · <span class="warn">${esc(m.warning)}</span>` : ""}</span></div>`).join("");
+  const next = done.length + 1;
+  if (t.status === "running" && next <= pp.total)
+    html += `<div class="pagerow"><span class="pdot run"></span><b>第${next}页</b><span class="pmeta">识别中</span></div>`;
+  const waitStart = t.status === "running" ? next + 1 : next;
+  if (waitStart <= pp.total)
+    html += `<div class="pagerow"><span class="pdot wait"></span><b>${waitStart === pp.total ? `第${waitStart}页` : `第${waitStart}–${pp.total}页`}</b><span class="pmeta">排队中</span></div>`;
+  box.innerHTML = html;
+}
+const BLOCK_CN = {text:"文本", title:"标题", table:"表格", figure:"图片",
+                  figure_caption:"图注", page_header:"页眉", page_footer:"页脚"};
+function pageDetailHtml(p) {
+  const counts = {};
+  p.blocks.forEach(b => counts[b.type] = (counts[b.type] || 0) + 1);
+  const parts = Object.entries(counts).map(([k, v]) => `${BLOCK_CN[k] || k}×${v}`);
+  if (!parts.length) parts.push("<span class='warn'>未提取到文字或表格</span>");
+  return parts.join(" · ");
+}
+
+/* 文档结果纯转换函数：按 result（与阅读顺序开关）参数化，两类渲染器共享 */
+function blocksWithIndex(p, order) {
+  const items = p.blocks.map((b, idx) => ({b, idx}));
+  return order
+    ? items.sort((a, c) => (a.b.bbox[1] - c.b.bbox[1]) || (a.b.bbox[0] - c.b.bbox[0]))
+    : items;
+}
+function sortedBlocks(p, order) {
+  return blocksWithIndex(p, order).map(x => x.b);
+}
+function docText(result, order) {
+  return result.pages.map(p =>
+    `── 第${p.page_num}页（OCR · ${p.blocks.length} 块）──\n` +
+    sortedBlocks(p, order).map(b => b.type === "table" ? (b.row_texts.join("\n") || "[表格]") : (b.text || ""))
+      .filter(Boolean).join("\n")).join("\n\n");
+}
+function docTextHtml(result, order) {
+  /* 文字标签页：块级可点击元素，点击在左侧页图上高亮该块 bbox */
+  return result.pages.map(p => {
+    const rows = blocksWithIndex(p, order).filter(x =>
+      x.b.type === "table" ? (x.b.row_texts || []).length : x.b.text).map(x => {
+      const body = x.b.type === "table"
+        ? `<span class="btag">[表格]</span>${esc(x.b.row_texts.join("\n"))}`
+        : `${x.b.type === "title" ? "<b>" + esc(x.b.text) + "</b>" : esc(x.b.text)}`;
+      return `<div class="dblock" data-page="${p.page_num}" data-idx="${x.idx}">${body}</div>`;
+    }).join("");
+    return `<div class="dpagehead">── 第${p.page_num}页（OCR · ${p.blocks.length} 块）──</div>` + rows;
+  }).join("") || "（未提取到内容）";
+}
+function docMarkdown(result, order) {
+  return result.pages.map(p => {
+    const parts = sortedBlocks(p, order).map(b => {
+      if (b.type === "table" && b.html) return b.html;
+      if (b.type === "title" && b.text) return `## ${b.text}`;
+      return b.text || "";
+    }).filter(Boolean);
+    return `<!-- 第${p.page_num}页 -->\n` + parts.join("\n\n");
+  }).join("\n\n");
+}
+
+/* 文档结果渲染器（文档页 / 文档批量详情卡各一实例）：原文页预览+bbox 高亮、
+   逐页摘要（点击展开块统计）、文字/MD/JSON 三视图、文本块↔页图联动。
+   页图由服务端按内容哈希渲染，bbox 为归一化坐标天然对齐。 */
+function makeDocRenderer(ids) {
+  let envelope = null, sha = null, page = 1, active = -1,
+      rtab = "text", order = true, viewText = "", filename = "识别结果";
+  function renderView() {
+    const result = envelope?.result;
+    if (!result) return;
+    const box = $(ids.resultBox);
+    if (rtab === "json") {
+      viewText = JSON.stringify(envelope, null, 2); box.textContent = viewText;
+    } else if (rtab === "md") {
+      viewText = docMarkdown(result, order) || "（未提取到内容）"; box.textContent = viewText;
+    } else {
+      viewText = docText(result, order) || "（未提取到内容）"; box.innerHTML = docTextHtml(result, order);
+    }
+  }
+  function setPage(n, keepActive = false) {
+    const result = envelope?.result;
+    if (!result) return;
+    n = Math.max(1, Math.min(result.pages.length, n));
+    page = n;
+    if (!keepActive) active = -1;
+    $(ids.pageNo).textContent = `第 ${n} / ${result.pages.length} 页`;
+    $(ids.placeholder).textContent = "加载页面…";
+    $(ids.placeholder).style.display = "block"; $(ids.wrap).style.display = "none";
+    $(ids.img).src = `${API}/files/${sha}/page/${n}`;
+  }
+  function drawBoxes() {
+    const img = $(ids.img), canvas = $(ids.overlay);
+    if (!img.naturalWidth || !envelope) return;
+    canvas.width = img.clientWidth; canvas.height = img.clientHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const p = envelope.result.pages[page - 1];
+    if (!p) return;
+    p.blocks.forEach((b, i) => {
+      const [x1, y1, x2, y2] = b.bbox || [0, 0, 0, 0];
+      ctx.lineWidth = i === active ? 3 : 1.2;
+      ctx.strokeStyle = i === active ? "#d5433c" : "rgba(47,111,237,.5)";
+      ctx.strokeRect(x1 * canvas.width, y1 * canvas.height,
+                     (x2 - x1) * canvas.width, (y2 - y1) * canvas.height);
+    });
+  }
+  $(ids.img).onload = () => {
+    $(ids.placeholder).style.display = "none";
+    $(ids.wrap).style.display = "inline-block";
+    drawBoxes();
+  };
+  $(ids.img).onerror = () => {
+    $(ids.wrap).style.display = "none";
+    $(ids.placeholder).textContent = "页图不可用（原件可能已被清理）";
+  };
+  $(ids.btnPrev).onclick = () => setPage(page - 1);
+  $(ids.btnNext).onclick = () => setPage(page + 1);
+  /* 逐页行点击 → 展开块统计（事件委托，双实例不依赖全局生成 id） */
+  $(ids.pageRows).addEventListener("click", e => {
+    const row = e.target.closest(".pagerow.clickable");
+    if (!row) return;
+    const d = row.nextElementSibling;
+    if (!d || !d.classList.contains("pagedetail")) return;
+    const open = d.style.display === "block";
+    d.style.display = open ? "none" : "block";
+    row.classList.toggle("open", !open);
+  });
+  /* 点文本块 → 切到对应页并高亮该块 */
+  $(ids.resultBox).addEventListener("click", e => {
+    const el = e.target.closest(".dblock");
+    if (!el) return;
+    $(ids.resultBox).querySelectorAll(".dblock.sel").forEach(x => x.classList.remove("sel"));
+    el.classList.add("sel");
+    const pg = +el.dataset.page, idx = +el.dataset.idx;
+    active = idx;
+    if (pg !== page) setPage(pg, true);   // keepActive：高亮跨页保留
+    else drawBoxes();
+  });
+  $(ids.rtabBox).querySelectorAll("button[data-rtab]").forEach(btn => btn.onclick = () => {
+    $(ids.rtabBox).querySelectorAll("button[data-rtab]").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on"); rtab = btn.dataset.rtab; renderView();
+  });
+  $(ids.btnOrder).onclick = () => {
+    order = !order;
+    $(ids.btnOrder).textContent = `按阅读顺序：${order ? "开" : "关"}`;
+    renderView();
+  };
+  $(ids.btnCopy).onclick = async () => {
+    try { await navigator.clipboard.writeText(viewText); toast("已复制到剪贴板"); }
+    catch { toast("复制失败，请手动选择复制", true); }
+  };
+  $(ids.btnDownload).onclick = () => {
+    const ext = {text: "txt", md: "md", json: "json"}[rtab];
+    const stem = (filename || "识别结果").replace(/\.[^.]+$/, "");
+    const blob = new Blob([viewText], {type: "text/plain;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `${stem}.识别结果.${ext}`;
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  function render(envelopeIn, filenameIn) {
+    envelope = envelopeIn;
+    if (filenameIn) filename = filenameIn;
+    const result = envelope.result;
+    $(ids.phase).textContent = `完成 · ${result.pages.length} 页 · ${(result.total_duration_ms/1000).toFixed(1)} 秒`;
+    $(ids.bar).style.width = "100%";
+    $(ids.pageRows).innerHTML = result.pages.map(p => {
+      const tables = p.blocks.filter(b => b.type === "table").length;
+      return `<div class="pagerow clickable" data-page="${p.page_num}">
+        <span class="pdot done"></span><b>第${p.page_num}页</b>
+        <span class="pmeta">OCR · ${p.blocks.length} 块${tables ? ` · ${tables} 张表` : ""} · ${(p.duration_ms/1000).toFixed(1)}s${p.blocks.length ? "" : " · <span class='warn'>未提取到内容</span>"}</span>
+        <span class="parr">›</span></div>
+        <div class="pagedetail">${pageDetailHtml(p)}</div>`;
+    }).join("");
+    sha = result.file_sha256;
+    page = 1; active = -1;
+    setPage(1);
+    renderView();
+    if (ids.onDone) ids.onDone();
+  }
+  return { render, redraw: drawBoxes };
+}
+
+const docRender = makeDocRenderer({
+  img: "imgDoc", overlay: "docOverlay", wrap: "docWrap",
+  placeholder: "docImgPlaceholder", pageNo: "docPageNo",
+  btnPrev: "btnDocPrev", btnNext: "btnDocNext",
+  pageRows: "docPageRows", phase: "docPhase", bar: "docBar",
+  rtabBox: "docResultCard", resultBox: "docResult",
+  btnOrder: "btnDocOrder", btnCopy: "btnDocCopy", btnDownload: "btnDocDownload",
+  onDone() {
+    $("docImageCard").style.display = "block";
+    $("docResultCard").style.display = "block";
+    refreshHealth();
+  },
+});
+const docBatchRender = makeDocRenderer({
+  img: "dImgDoc", overlay: "dOverlay", wrap: "dDocWrap",
+  placeholder: "dDocImgPlaceholder", pageNo: "dDocPageNo",
+  btnPrev: "dBtnDocPrev", btnNext: "dBtnDocNext",
+  pageRows: "dDocPageRows", phase: "dDocMeta", bar: "dDocBar",
+  rtabBox: "dDocRtabs", resultBox: "dDocResult",
+  btnOrder: "dBtnDocOrder", btnCopy: "dBtnDocCopy", btnDownload: "dBtnDocDownload",
+});
+
+/* ---------- 批量 ---------- */
+let batchCur = null;            // 当前批次详情缓存
+let batchFilter = "all", batchPage = 1;
+const BATCH_PAGE_SIZE = 20;
+
+function wireBatchFiles(files) {
+  const list = [...files];
+  if (!list.length) return;
+  switchTab("batch");
+  const form = new FormData();
+  list.forEach(f => form.append("files", f));
+  (async () => {
+    try {
+      const resp = await fetch(`${API}/batches`, {method: "POST", body: form});
+      const body = await resp.json();
+      if (resp.status !== 202) throw new Error(body.detail?.message || "上传失败");
+      toast(`批次 ${body.batch_id}：${body.accepted} 接受 / ${body.rejected} 拒绝`);
+      pollBatch(body.batch_id);
+    } catch (e) { toast(e.message, true); }
+  })();
+}
+wireDrop("dropBatch", "fileBatch", wireBatchFiles, {multiple: true});
+$("btnNewBatch").onclick = () => $("fileBatch").click();
+$("batchSelect").onchange = () => pollBatch(+$("batchSelect").value);
+
+/* 单项派生信息：状态分类 / 字段数 / 问题文本 / 真实用时（领取→完成） */
+function batchItemView(i) {
+  const view = {item: i, state: "pending", stateCn: "处理中", cls: "b-info",
+                fields: "—", problem: "", duration: null, actions: []};
+  if (i.status === "queued" || i.status === "running") {
+    view.problem = i.status === "queued" ? "排队中" : "识别中";
+    return view;
+  }
+  if (i.status === "failed") {
+    view.state = "failed"; view.stateCn = "失败"; view.cls = "b-err";
+    view.problem = i.error_message || i.error_code || "";
+    if (!["UNSUPPORTED_FORMAT", "FILE_TOO_LARGE", "CONVERT_FAILED", "DOC_TOO_LONG"]
+        .includes(i.error_code) && i.attempts < 3) view.actions.push("retry");
+    return view;
+  }
+  const doneSecs = (Date.parse(i.finished_at) - Date.parse(i.started_at)) / 1000;
+  // 引擎真实耗时（毫秒：识别→分类→抽段→校验全链路）优先；无信封时退回秒级时间戳差
+  const engineMs = i.envelope?.result?.duration_ms;
+  view.durationMs = Number.isFinite(engineMs) ? engineMs : null;
+  view.duration = view.durationMs !== null ? view.durationMs / 1000
+      : (Number.isFinite(doneSecs) && doneSecs >= 0 ? doneSecs : null);
+  if (i.kind !== "card") {                    // 识别成功但路由成文档 → 已跳过
+    view.state = "skipped"; view.stateCn = "已跳过"; view.cls = "b-mute";
+    view.problem = i.reason || "不是支持的证件类型";
+    if (i.task_type !== "document_scan") view.actions.push("retype");   // 纯文档任务不提供证件重识别
+    return view;
+  }
+  const fields = i.envelope?.result?.fields || [];
+  view.fields = fields.length;
+  const bad = fields.filter(f => f.needs_review);
+  if (bad.length) {
+    view.state = "issues"; view.stateCn = "有问题"; view.cls = "b-warn";
+    view.problem = bad.map(f => `${f.name}${(f.validation?.errors || []).length
+        ? "：" + f.validation.errors.join("，") : ` 置信度 ${f.confidence.toFixed(2)}`}`)
+      .join("；");
+  } else {
+    view.state = "ok"; view.stateCn = "通过"; view.cls = "b-ok";
+  }
+  view.actions.push("view");
+  return view;
+}
+
+function renderBatch(b) {
+  batchCur = b;
+  const views = b.items.map(batchItemView);
+  const count = s => views.filter(v => v.state === s).length;
+  const c = b.counts;
+  const engineTimes = views.filter(v => v.durationMs !== null).map(v => v.durationMs);
+  const avgMs = engineTimes.length ? engineTimes.reduce((a, x) => a + x, 0) / engineTimes.length : null;
+  const avg = avgMs !== null ? avgMs / 1000 : null;   // 秒，供"预计还需"估算
+  const remaining = c.queued + c.running;
+  const retryable = views.filter(v => v.actions.includes("retry")).length;
+  $("btnRetry").textContent = retryable ? `重试失败的 ${retryable} 张` : "重试失败的";
+  $("btnRetry").disabled = retryable === 0;
+  $("batchStats").innerHTML = `
+    <div class="stat"><b>${c.done + c.failed}/${b.total}</b><span>已处理${remaining && avg ? ` · 预计还需 ~${Math.ceil(avg * remaining)}秒` : ""}</span>
+      <div class="progress" style="margin:6px 0 0"><i id="batchBar" style="width:${Math.round(b.progress * 100)}%"></i></div></div>
+    <div class="stat"><b class="ok">${count("ok")}</b><span>全部通过</span></div>
+    <div class="stat"><b class="warn">${count("issues")}</b><span>有问题字段</span></div>
+    <div class="stat"><b class="err">${c.failed}</b><span>失败</span></div>
+    <div class="stat"><b>${avgMs !== null ? (avgMs < 1000 ? Math.round(avgMs) + " ms" : (avgMs / 1000).toFixed(1) + " 秒") : "—"}</b><span>平均每张（引擎耗时）</span></div>`;
+  const filters = [["all", "全部", b.total], ["ok", "通过", count("ok")],
+                   ["issues", "有问题", count("issues")], ["pending", "处理中", remaining],
+                   ["failed", "失败", c.failed], ["skipped", "已跳过", count("skipped")]];
+  $("batchFilters").innerHTML = filters.map(([key, cn, n]) =>
+    `<button data-f="${key}" class="${batchFilter === key ? "on" : ""}">${cn} ${n}</button>`).join("");
+  $("batchFilters").querySelectorAll("button").forEach(btn => btn.onclick = () => {
+    batchFilter = btn.dataset.f; batchPage = 1; renderBatch(batchCur);
+  });
+  const rows = views.filter(v => batchFilter === "all" || v.state === batchFilter);
+  const totalPages = Math.max(1, Math.ceil(rows.length / BATCH_PAGE_SIZE));
+  batchPage = Math.min(batchPage, totalPages);
+  const pageRows = rows.slice((batchPage - 1) * BATCH_PAGE_SIZE, batchPage * BATCH_PAGE_SIZE);
+  $("batchTable").querySelector("tbody").innerHTML = pageRows.map(v => {
+    const i = v.item;
+    const actions = [];
+    if (v.actions.includes("view")) actions.push(`<a href="#" onclick="batchView(${i.task_id});return false">查看</a>`);
+    if (v.actions.includes("retry")) actions.push(`<a href="#" onclick="batchRetryOne(${i.task_id});return false">重试</a>`);
+    if (v.actions.includes("retype")) actions.push(
+      `<select onchange="batchRetype(${i.task_id}, this.value)" style="padding:2px 6px;font-size:12px">
+         <option value="">指定类型…</option>
+         <option value="id_front">身份证正面</option><option value="id_back">身份证反面</option>
+         <option value="license">营业执照</option><option value="driver">驾驶证</option></select>`);
+    return `<tr>
+      <td>${esc(i.filename)}</td>
+      <td>${i.status === "done" ? esc(i.doc_type_cn || "") : "—"}</td>
+      <td>${v.fields}</td>
+      <td class="muted" style="max-width:340px">${esc(v.problem)}</td>
+      <td>${v.durationMs !== null
+        ? (v.durationMs < 1000 ? v.durationMs + " ms" : (v.durationMs / 1000).toFixed(1) + " 秒")
+        : (v.duration !== null ? v.duration.toFixed(1) + " 秒" : "—")}</td>
+      <td><span class="badge ${v.cls}">${v.stateCn}</span></td>
+      <td style="white-space:nowrap">${actions.join(" ") || "—"}</td></tr>`;
+  }).join("") || `<tr><td colspan="7" class="muted" style="text-align:center;padding:20px">该筛选下没有条目</td></tr>`;
+  let pager = `<span class="muted">共 ${rows.length} 张</span>`;
+  if (totalPages > 1) {
+    pager += ` <button class="ghost" style="padding:3px 10px" ${batchPage <= 1 ? "disabled" : ""}
+      onclick="batchGoto(${batchPage - 1})">‹</button>`;
+    for (let p = 1; p <= totalPages; p++)
+      pager += `<button class="ghost" style="padding:3px 10px${p === batchPage ? ";background:#e8effe" : ""}"
+        onclick="batchGoto(${p})">${p}</button>`;
+    pager += ` <button class="ghost" style="padding:3px 10px" ${batchPage >= totalPages ? "disabled" : ""}
+      onclick="batchGoto(${batchPage + 1})">›</button>`;
+  }
+  $("batchPager").innerHTML = pager;
+}
+function batchGoto(p) { batchPage = p; renderBatch(batchCur); }
+
+async function refreshBatchList(selectId) {
+  const list = await (await fetch(`${API}/batches`)).json();
+  $("batchSelect").innerHTML = list
+    .filter(b => (b.types || "").includes("card"))   // 只列含证件任务的批次（文档批次归文档批量页）
+    .map(b => `<option value="${b.id}">#${b.id} · ${bjTime(b.created_at)}`
+      + ` · ${b.pending ? "处理中" : "完成"}（${b.done + b.failed}/${b.total}）</option>`).join("");
+  if (selectId) $("batchSelect").value = selectId;
+}
+
+async function pollBatch(batchId) {
+  $("batchCard").style.display = "block";
+  $("btnExportXlsx").href = `${API}/batches/${batchId}/export?format=xlsx`;
+  $("btnExportJson").href = `${API}/batches/${batchId}/export?format=json`;
+  await refreshBatchList(batchId);
+  let failures = 0;
+  for (;;) {
+    let b;
+    try {
+      b = await (await fetch(`${API}/batches/${batchId}`)).json();
+      failures = 0;
+    } catch (e) {                     // 网络抖动：重试，连续 5 次提示并停止轮询
+      if (++failures > 5) { toast("批次进度轮询中断：" + e.message, true); return; }
+      await new Promise(r => setTimeout(r, 2000));
+      continue;
+    }
+    renderBatch(b);
+    if (b.counts.queued === 0 && b.counts.running === 0) break;
+    await new Promise(r => setTimeout(r, 3000));
+  }
+  refreshBatchList(batchId);
+  refreshHealth();
+}
+
+/* 行操作：查看（批量页内直接展示证件详情）/ 单张重试 / 指定类型重识别 */
+async function batchView(taskId) {
+  const i = batchCur.items.find(x => x.task_id === taskId);
+  if (!i?.envelope) return;
+  const ext = (i.filename.match(/\.(\w+)$/) || [])[1]?.toLowerCase() || "jpg";
+  batchCertRender.render(i.envelope, `${API}/files/${i.file_sha256}.${ext}`, undefined);
+  const card = $("batchDetailCard");
+  card.style.display = "block";
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+$("bBtnClose").onclick = () => { $("batchDetailCard").style.display = "none"; };
+async function batchRetryOne(taskId) {
+  const resp = await fetch(`${API}/tasks/${taskId}/retry`, {method: "POST"});
+  const body = await resp.json();
+  if (!resp.ok) { toast(body.detail?.message || "重试失败", true); return; }
+  toast(`任务 #${taskId} 已重新排队`);
+  pollBatch(batchCur.batch_id || +$("batchSelect").value);
+}
+async function batchRetype(taskId, type) {
+  if (!type) return;
+  const batchId = batchCur.batch_id || +$("batchSelect").value;
+  const resp = await fetch(`${API}/batches/${batchId}/items/${taskId}/retype`, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({type})});
+  const body = await resp.json();
+  if (!resp.ok) { toast(body.detail?.message || "提交失败", true); return; }
+  toast(`已按指定类型重新排队（任务 #${body.task_id}）`);
+  pollBatch(batchId);
+}
+$("btnRetry").onclick = async () => {
+  const id = +$("batchSelect").value;
+  const r = await (await fetch(`${API}/batches/${id}/retry_failed`, {method: "POST"})).json();
+  toast(`已重排 ${r.requeued} 项，永久失败跳过 ${r.skipped_permanent} 项`);
+  pollBatch(id);
+};
+
+/* ---------- 文档批量 ---------- */
+let docBatchCur = null;            // 当前文档批次详情缓存
+let docBatchFilter = "all", docBatchPage = 1, docBatchPeak = 1;
+const DOC_BATCH_PAGE_SIZE = 20;
+
+function startDocBatch(files) {
+  const list = [...files].filter(f => /\.(pdf|docx?|xlsx?|pptx?)$/i.test(f.name));
+  if (!list.length) { toast("没有可识别的文档文件（支持 PDF / Word / Excel / PPT）", true); return; }
+  const form = new FormData();
+  list.forEach(f => form.append("files", f));
+  (async () => {
+    try {
+      const resp = await fetch(`${API}/batches`, {method: "POST", body: form});
+      const body = await resp.json();
+      if (resp.status !== 202) throw new Error(body.detail?.message || "上传失败");
+      toast(`文档批次 ${body.batch_id}：${body.accepted} 接受 / ${body.rejected} 拒绝`);
+      pollDocBatch(body.batch_id);
+    } catch (e) { toast(e.message, true); }
+  })();
+}
+wireDrop("dropDocBatch", "fileDocBatch", startDocBatch, {multiple: true});
+$("btnDocBatchNew").onclick = () => $("fileDocBatch").click();
+$("docBatchSelect").onchange = () => pollDocBatch(+$("docBatchSelect").value);
+$("dBtnClose").onclick = () => { $("docBatchDetailCard").style.display = "none"; };
+
+/* 单项派生信息：进度文本（识别中带页码百分比）/ 页数块数 / 真实用时 / 可重试性 */
+function docBatchItemView(i) {
+  const view = {item: i, state: "pending", stateCn: "处理中", cls: "b-info",
+                progress: "", pages: "—", duration: null, actions: []};
+  if (i.status === "queued") { view.progress = "排队中"; return view; }
+  if (i.status === "running") {
+    view.progress = `${i.phase || "识别中"}（${Math.round((i.progress || 0) * 100)}%）`;
+    return view;
+  }
+  if (i.status === "failed") {
+    view.state = "failed"; view.stateCn = "失败"; view.cls = "b-err";
+    view.progress = i.error_message || i.error_code || "";
+    if (!["UNSUPPORTED_FORMAT", "FILE_TOO_LARGE", "CONVERT_FAILED", "DOC_TOO_LONG"]
+        .includes(i.error_code) && i.attempts < 3) view.actions.push("retry");
+    return view;
+  }
+  const r = i.envelope?.result;
+  if (!r) return view;
+  view.state = "done"; view.stateCn = "完成"; view.cls = "b-ok";
+  const blocks = (r.pages || []).reduce((a, p) => a + p.blocks.length, 0);
+  view.pages = `${r.pages.length} 页 · ${blocks} 块`;
+  view.duration = (r.total_duration_ms || 0) / 1000;
+  view.actions.push("view");
+  return view;
+}
+
+function renderDocBatch(b) {
+  docBatchCur = b;
+  const items = b.items.filter(i => i.task_type !== "card");   // 混传批次只展示文档行
+  const views = items.map(docBatchItemView);
+  const count = s => views.filter(v => v.state === s).length;
+  const running = items.filter(i => i.status === "running").length;
+  const done = count("done"), failed = count("failed");
+  const total = items.length, finished = done + failed;
+  docBatchPeak = Math.max(docBatchPeak, running);              // 并行度峰值（ETA 估算用）
+  const durations = views.filter(v => v.duration !== null).map(v => v.duration);
+  const avg = durations.length ? durations.reduce((a, x) => a + x, 0) / durations.length : null;
+  const remaining = total - finished;
+  const eta = avg && remaining ? Math.ceil(avg * remaining / docBatchPeak) : null;
+  const retryable = views.filter(v => v.actions.includes("retry")).length;
+  $("btnDocBatchRetry").textContent = retryable ? `重试失败的 ${retryable} 份` : "重试失败的";
+  $("btnDocBatchRetry").disabled = retryable === 0;
+  $("docBatchStats").innerHTML = `
+    <div class="stat"><b>${finished}/${total}</b><span>已处理${running ? ` · 并行 ${running} 路` : ""}${eta ? ` · 预计还需 ~${eta}秒` : ""}</span>
+      <div class="progress" style="margin:6px 0 0"><i style="width:${total ? Math.round(finished / total * 100) : 100}%"></i></div></div>
+    <div class="stat"><b class="ok">${done}</b><span>完成</span></div>
+    <div class="stat"><b class="err">${failed}</b><span>失败</span></div>
+    <div class="stat"><b>${running}</b><span>并行识别中</span></div>
+    <div class="stat"><b>${avg !== null ? avg.toFixed(1) + " 秒" : "—"}</b><span>平均每份（引擎耗时）</span></div>`;
+  const filters = [["all", "全部", total], ["done", "完成", done],
+                   ["pending", "处理中", remaining], ["failed", "失败", failed]];
+  $("docBatchFilters").innerHTML = filters.map(([key, cn, n]) =>
+    `<button data-f="${key}" class="${docBatchFilter === key ? "on" : ""}">${cn} ${n}</button>`).join("");
+  $("docBatchFilters").querySelectorAll("button").forEach(btn => btn.onclick = () => {
+    docBatchFilter = btn.dataset.f; docBatchPage = 1; renderDocBatch(docBatchCur);
+  });
+  const rows = views.filter(v => docBatchFilter === "all" || v.state === docBatchFilter);
+  const totalPages = Math.max(1, Math.ceil(rows.length / DOC_BATCH_PAGE_SIZE));
+  docBatchPage = Math.min(docBatchPage, totalPages);
+  const pageRows = rows.slice((docBatchPage - 1) * DOC_BATCH_PAGE_SIZE, docBatchPage * DOC_BATCH_PAGE_SIZE);
+  $("docBatchTable").querySelector("tbody").innerHTML = pageRows.map(v => {
+    const i = v.item;
+    const actions = [];
+    if (v.actions.includes("view")) actions.push(`<a href="#" onclick="docBatchView(${i.task_id});return false">查看</a>`);
+    if (v.actions.includes("retry")) actions.push(`<a href="#" onclick="docBatchRetryOne(${i.task_id});return false">重试</a>`);
+    return `<tr>
+      <td>${esc(i.filename)}</td>
+      <td class="muted" style="max-width:320px">${esc(v.progress) || "—"}</td>
+      <td>${v.pages}</td>
+      <td>${v.duration !== null ? v.duration.toFixed(1) + " 秒" : "—"}</td>
+      <td><span class="badge ${v.cls}">${v.stateCn}</span></td>
+      <td style="white-space:nowrap">${actions.join(" ") || "—"}</td></tr>`;
+  }).join("") || `<tr><td colspan="6" class="muted" style="text-align:center;padding:20px">该筛选下没有条目</td></tr>`;
+  let pager = `<span class="muted">共 ${rows.length} 份</span>`;
+  if (totalPages > 1) {
+    pager += ` <button class="ghost" style="padding:3px 10px" ${docBatchPage <= 1 ? "disabled" : ""}
+      onclick="docBatchGoto(${docBatchPage - 1})">‹</button>`;
+    for (let p = 1; p <= totalPages; p++)
+      pager += `<button class="ghost" style="padding:3px 10px${p === docBatchPage ? ";background:#e8effe" : ""}"
+        onclick="docBatchGoto(${p})">${p}</button>`;
+    pager += ` <button class="ghost" style="padding:3px 10px" ${docBatchPage >= totalPages ? "disabled" : ""}
+      onclick="docBatchGoto(${docBatchPage + 1})">›</button>`;
+  }
+  $("docBatchPager").innerHTML = pager;
+}
+function docBatchGoto(p) { docBatchPage = p; renderDocBatch(docBatchCur); }
+
+async function refreshDocBatchList(selectId) {
+  const list = await (await fetch(`${API}/batches`)).json();
+  $("docBatchSelect").innerHTML = list
+    .filter(b => (b.types || "").includes("document_scan"))   // 只列含文档任务的批次
+    .map(b => `<option value="${b.id}">#${b.id} · ${bjTime(b.created_at)}`
+      + ` · ${b.pending ? "处理中" : "完成"}（${b.done + b.failed}/${b.total}）</option>`).join("");
+  if (selectId) $("docBatchSelect").value = selectId;
+}
+
+async function pollDocBatch(batchId) {
+  $("docBatchCard").style.display = "block";
+  $("btnDocBatchExport").href = `${API}/batches/${batchId}/export?format=json`;
+  docBatchPeak = 1;
+  await refreshDocBatchList(batchId);
+  let failures = 0;
+  for (;;) {
+    let b;
+    try {
+      b = await (await fetch(`${API}/batches/${batchId}`)).json();
+      failures = 0;
+    } catch (e) {                     // 网络抖动：重试，连续 5 次提示并停止轮询
+      if (++failures > 5) { toast("文档批次轮询中断：" + e.message, true); return; }
+      await new Promise(r => setTimeout(r, 2000));
+      continue;
+    }
+    renderDocBatch(b);
+    if (b.counts.queued === 0 && b.counts.running === 0) break;
+    await new Promise(r => setTimeout(r, 3000));
+  }
+  refreshDocBatchList(batchId);
+  refreshHealth();
+}
+
+/* 行操作：查看（详情卡内完整文档结果）/ 单份重试 */
+function docBatchView(taskId) {
+  const i = docBatchCur.items.find(x => x.task_id === taskId);
+  if (!i?.envelope) return;
+  $("dDocTitle").textContent = i.filename;
+  docBatchRender.render(i.envelope, i.filename);
+  const card = $("docBatchDetailCard");
+  card.style.display = "block";
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+async function docBatchRetryOne(taskId) {
+  const resp = await fetch(`${API}/tasks/${taskId}/retry`, {method: "POST"});
+  const body = await resp.json();
+  if (!resp.ok) { toast(body.detail?.message || "重试失败", true); return; }
+  toast(`任务 #${taskId} 已重新排队`);
+  pollDocBatch(docBatchCur.batch_id || +$("docBatchSelect").value);
+}
+$("btnDocBatchRetry").onclick = async () => {
+  const id = +$("docBatchSelect").value;
+  const r = await (await fetch(`${API}/batches/${id}/retry_failed`, {method: "POST"})).json();
+  toast(`已重排 ${r.requeued} 项，永久失败跳过 ${r.skipped_permanent} 项`);
+  pollDocBatch(id);
+};
+
+/* ---------- 评测（预设一键 + 可选标准答案覆盖） ---------- */
+const COND_CN = {scan: "扫描", photo: "翻拍", rotate: "旋转", perspective: "透视", blur: "模糊",
+  noise: "噪点", glare: "反光", uneven: "光照不均", watermark: "水印", wrap: "弯折",
+  bad_number: "做错号码", bad_date: "做错日期", long_term: "长期", bad_period: "做错期限"};
+$("evalGt").onchange = () => {
+  $("evalGtName").textContent = $("evalGt").files[0] ? `已选：${$("evalGt").files[0].name}` : "";
+};
+async function loadEvalPresets() {
+  try {
+    const d = await (await fetch(`${API}/eval/presets`)).json();
+    $("evalPreset").innerHTML = d.presets.map(p =>
+      `<option value="${esc(p.label)}">${esc(p.label)}（${p.files} 张）</option>`).join("")
+      || "<option value=''>（无可用预设）</option>";
+  } catch { $("evalPreset").innerHTML = "<option value=''>（加载失败）</option>"; }
+}
+loadEvalPresets();
+$("btnEval").onclick = async () => {
+  const label = $("evalPreset").value;
+  if (!label) { toast("没有可用的评测预设", true); return; }
+  $("btnEval").disabled = true; $("btnEval").textContent = "评测中…";
+  try {
+    let resp = await fetch(`${API}/eval/run-preset`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({label}),
+    });
+    let body = await resp.json();
+    if (resp.status !== 200) throw new Error(body.detail || "评测失败");
+    // 用户导入了自定义标准答案 → 用它对同一批次重评
+    if ($("evalGt").files.length) {
+      const form = new FormData();
+      form.append("batch_id", body.batch_id);
+      form.append("ground_truth", $("evalGt").files[0]);
+      resp = await fetch(`${API}/eval`, {method: "POST", body: form});
+      const body2 = await resp.json();
+      if (resp.status !== 200) throw new Error(body2.detail?.message || "自定义标准答案评测失败");
+      body2.preset = label + "（自定义答案）";
+      body = body2;
+    }
+    renderEval(body);
+  } catch (e) { toast(String(e.message), true); }
+  $("btnEval").disabled = false; $("btnEval").textContent = "▶ 开始评测";
+};
+function pct(v) { return v == null ? "—" : (v * 100).toFixed(1) + "%"; }
+function renderEval(payload) {
+  const r = payload.report;
+  $("evalCard").style.display = "block";
+  $("evalMeta").textContent =
+    `评测 #${payload.eval_id} · 批次 #${payload.batch_id}${payload.preset ? " · " + payload.preset : ""}`;
+  $("evalStats").innerHTML = `
+    <div class="stat"><b>${pct(r.field_accuracy)}</b><span>字段准确率（${r.correct_fields}/${r.total_fields}）</span></div>
+    <div class="stat"><b>${pct(r.type_accuracy)}</b><span>类型判断（${Math.round(r.type_accuracy * r.files)}/${r.files}）</span></div>
+    <div class="stat"><b>${r.wrong_fields_flagged}/${r.wrong_fields_total}</b><span>错误被校验发现</span></div>
+    <div class="stat"><b>${r.avg_seconds_per_file == null ? "—" : r.avg_seconds_per_file + " 秒"}</b><span>平均每张</span></div>`;
+  $("evalByType").querySelector("tbody").innerHTML = Object.entries(r.by_type).map(([k, v]) =>
+    `<tr><td>${esc(k)}</td><td>${v.samples}</td><td>${pct(v.accuracy)}（${v.correct}/${v.total}）</td></tr>`).join("");
+  const wrong = r.wrong_details || [];
+  $("evalWrongCount").textContent = wrong.length ? `${wrong.length} 个` : "";
+  $("evalWrong").querySelector("tbody").innerHTML = wrong.map(w => `
+    <tr><td>${esc(w.file)}</td><td>${esc(w.field)}</td>
+        <td>${esc(w.expected)}</td><td>${esc(w.actual ?? "（未识别）")}</td>
+        <td>${w.flagged
+          ? '<span style="color:#1c7c4a">● 是</span>'
+          : '<span style="color:#98a2b3">● 否</span>'}</td></tr>`).join("")
+    || `<tr><td colspan="5" class="muted">全部正确，无错误字段</td></tr>`;
+  // 逐张准确率条形图（按质量条件分组，组内按文件名）
+  const items = r.items || [];
+  const conds = [...new Set(items.map(i => i.cond || "其他"))];
+  $("evalBars").innerHTML = conds.map(cond => {
+    const group = items.filter(i => (i.cond || "其他") === cond);
+    const rows = group.map(i => {
+      const acc = i.total ? i.correct / i.total : 0;
+      const color = acc >= 1 ? "#1c7c4a" : acc >= 0.8 ? "#3b6ef5" : "#a53731";
+      return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0">
+        <span style="flex:0 0 220px;font-size:12px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(i.file)}">${esc(i.file)}</span>
+        <div style="flex:1;background:#eef1f6;border-radius:6px;height:14px">
+          <div style="width:${(acc * 100).toFixed(1)}%;height:100%;border-radius:6px;background:${color}"></div>
+        </div>
+        <span style="flex:0 0 64px;font-size:12px;text-align:right">${i.correct}/${i.total}</span></div>`;
+    }).join("");
+    return `<div style="margin:8px 0 4px;font-size:12px;font-weight:600;color:var(--ink2)">
+      ${COND_CN[cond] || esc(cond)}（${group.length} 张）</div>${rows}`;
+  }).join("");
+  if (r.pending_files.length) toast(`有 ${r.pending_files.length} 个文件未完成，未计入`, true);
+}
+
+/* ---------- 证件配置（可插拔 YAML：保存草稿 → 一键重跑回测 → 确认/取消上线） ---------- */
+let ccTypes = [], ccDefaultSource = null;
+const ccTrialStatus = {running: "运行中", ready: "待确认", confirmed: "已上线", cancelled: "已取消"};
+
+async function ccRefresh() {
+  try {
+    const d = await (await fetch(`${API}/cert-configs`)).json();
+    ccTypes = d.types;
+    const cur = $("ccType").value || (d.types[0] && d.types[0].type_id);
+    $("ccType").innerHTML = d.types.map(t =>
+      `<option value="${t.type_id}">${esc(t.name)}（${t.type_id}）</option>`).join("");
+    if (cur) $("ccType").value = cur;
+    ccRenderType();
+    const srcs = await (await fetch(`${API}/cert-configs/trial-sources`)).json();
+    ccDefaultSource = srcs.sources.length ? srcs.sources[0].label : null;
+    await ccRefreshTrials();
+  } catch (e) { toast("证件配置加载失败：" + e.message, true); }
+}
+
+function ccCurrent() { return ccTypes.find(t => t.type_id === $("ccType").value); }
+
+function ccRenderType() {
+  const t = ccCurrent(); if (!t) return;
+  $("ccYaml").value = t.yaml_text;
+  $("ccMeta").textContent = `${t.fields.length} 字段 · 生效指纹 ${t.yaml_sha256}`;
+  $("ccExport").href = `${API}/cert-configs/${t.type_id}/export`;
+  const hasDraft = !!t.draft;
+  $("ccTrial").disabled = !hasDraft;
+  $("ccConfirm").disabled = !hasDraft;
+  $("ccCancelTrial").disabled = !hasDraft;
+}
+$("ccType").onchange = () => {
+  ccRenderType();
+  $("ccReportCard").style.display = "none";
+  ccRecPage = 1;
+  ccRenderRecords();
+};
+
+$("ccSave").onclick = async () => {
+  const typeId = $("ccType").value;
+  $("ccSave").disabled = true;
+  try {
+    const resp = await fetch(`${API}/cert-configs/${typeId}`, {
+      method: "PUT", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({yaml_text: $("ccYaml").value}),
+    });
+    const body = await resp.json();
+    if (resp.status !== 200) throw new Error(body.detail || "校验失败");
+    toast(`草稿已保存（${body.fields.length} 字段），可开始重跑`);
+    await ccRefresh();
+  } catch (e) { toast(String(e.message), true); }
+  $("ccSave").disabled = false;
+};
+
+$("ccTrial").onclick = async () => {
+  const typeId = $("ccType").value;
+  $("ccTrial").disabled = true;
+  try {
+    const resp = await fetch(`${API}/cert-configs/${typeId}/trials`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({source_label: ccDefaultSource, scope: "type"}),
+    });
+    const body = await resp.json();
+    if (resp.status !== 200) throw new Error(body.detail || "创建失败");
+    toast(`重跑 #${body.trial_id} 已开始，完成后在下方记录里逐文件查看对比`);
+    await ccRefreshTrials();
+  } catch (e) { toast(String(e.message), true); }
+  $("ccTrial").disabled = false;
+};
+
+let ccRecPage = 1;
+const CC_REC_PAGE_SIZE = 10;
+let ccRecords = [];
+
+async function ccRefreshTrials() {
+  let d;
+  try { d = await (await fetch(`${API}/cert-configs/trials`)).json(); }
+  catch { return; }
+  ccRecords = d.records || [];
+  ccRenderRecords();
+}
+
+function ccRenderRecords() {
+  const typeId = $("ccType").value;
+  const records = ccRecords.filter(r => r.type_id === typeId);
+  const totalPages = Math.max(1, Math.ceil(records.length / CC_REC_PAGE_SIZE));
+  ccRecPage = Math.min(Math.max(1, ccRecPage), totalPages);
+  const pageRows = records.slice((ccRecPage - 1) * CC_REC_PAGE_SIZE,
+                                 ccRecPage * CC_REC_PAGE_SIZE);
+  let hasRunning = false;
+  $("ccTrials").querySelector("tbody").innerHTML = pageRows.map(t => {
+    if (t.status === "running") hasRunning = true;
+    const verdict = t.status === "running"
+      ? `运行中 ${t.progress}`
+      : ccVerdict(t.verdict);
+    return `
+    <tr>
+      <td>#${t.record_no}</td>
+      <td>${esc(t.file)}</td>
+      <td>${verdict}</td>
+      <td>${t.status === "running" ? "—"
+        : `<button class="ghost" onclick="ccShowFile(${t.trial_id}, '${esc(t.file)}')">查看对比</button>`}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="4" class="muted">该证件类型暂无重跑记录</td></tr>`;
+  let pager = `<span class="muted">共 ${records.length} 条</span>`;
+  if (totalPages > 1) {
+    pager += ` <button class="ghost" style="padding:3px 10px" ${ccRecPage <= 1 ? "disabled" : ""}
+      onclick="ccGotoRec(${ccRecPage - 1})">‹</button>`;
+    for (let p = 1; p <= totalPages; p++)
+      pager += `<button class="ghost" style="padding:3px 10px${p === ccRecPage ? ";background:#e8effe" : ""}"
+        onclick="ccGotoRec(${p})">${p}</button>`;
+    pager += ` <button class="ghost" style="padding:3px 10px" ${ccRecPage >= totalPages ? "disabled" : ""}
+      onclick="ccGotoRec(${ccRecPage + 1})">›</button>`;
+  }
+  $("ccRecPager").innerHTML = pager;
+  if (hasRunning) setTimeout(ccRefreshTrials, 3000);
+}
+function ccGotoRec(p) { ccRecPage = p; ccRenderRecords(); }
+
+async function ccShowFile(trialId, fileName) {
+  let body;
+  try {
+    const resp = await fetch(`${API}/cert-configs/trials/${trialId}`);
+    body = await resp.json();
+    if (resp.status !== 200) throw new Error(body.detail || "查询失败");
+  } catch (e) { toast(String(e.message), true); return; }
+  $("ccReportCard").style.display = "block";
+  if (body.status === "running" || !body.report) {
+    $("ccReportTitle").textContent = `前后对比 · 重跑 #${trialId}`;
+    const p = body.progress;
+    $("ccProgress").textContent = `重跑进行中：本次修改 ${p.draft.done}/${p.draft.total} · 当前生效 ${p.ref.done}/${p.ref.total}`;
+    $("ccFileBody").innerHTML = "";
+    return;
+  }
+  const row = body.report.files.find(f => f.file === fileName);
+  if (!row) { toast("记录里找不到该文件", true); return; }
+  $("ccProgress").textContent =
+    `本次修改 ${row.draft.correct}/${row.draft.total} · 当前生效 ${row.ref ? row.ref.correct + "/" + row.ref.total : "—"} · 重跑状态：${ccTrialStatus[body.status] || body.status}`;
+  $("ccReportTitle").textContent = `前后对比 · #${trialId} · ${fileName} · ${ccVerdict(row.verdict)}`;
+  const mark = ok => ok ? '<span style="color:#1c7c4a">✓</span>'
+                        : '<span style="color:#a53731">✗</span>';
+  const rows = (row.fields || []).map(f => `
+    <tr>
+      <td>${esc(f.name)}</td>
+      <td style="max-width:200px;word-break:break-all">${esc(f.expected)}</td>
+      <td style="max-width:240px;word-break:break-all">${mark(f.draft_ok)} ${esc(f.draft_value)}${f.draft_review ? ' <span class="muted">⚠复核</span>' : ""}</td>
+      <td style="max-width:240px;word-break:break-all">${mark(f.ref_ok)} ${esc(f.ref_value)}</td>
+    </tr>`).join("");
+  $("ccFileBody").innerHTML = `
+    <table><thead><tr><th>字段</th><th>标准答案</th><th>本次修改</th><th>当前生效</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4" class="muted">无字段明细</td></tr>'}</tbody></table>`;
+}
+
+function ccVerdict(v) {
+  const map = {better: ["变好 ↑", "#1c7c4a"], worse: ["变坏 ↓", "#a53731"], same: ["持平", "var(--ink2)"]};
+  const [label, color] = map[v] || [v, "inherit"];
+  return `<span style="color:${color};font-weight:600">${label}</span>`;
+}
+
+$("ccConfirm").onclick = async () => {
+  const typeId = $("ccType").value;
+  if (!confirm(`确认上线？「${typeId}」的生效配置将切换为草稿版，后续识别自动按新 YAML 重算。`)) return;
+  $("ccConfirm").disabled = true;
+  const resp = await fetch(`${API}/cert-configs/${typeId}/confirm`, {method: "POST"});
+  const body = await resp.json();
+  if (resp.status !== 200) { toast(body.detail || "确认失败", true); }
+  else { toast(body.message); await ccRefresh(); }
+  $("ccConfirm").disabled = false;
+};
+$("ccCancelTrial").onclick = async () => {
+  const typeId = $("ccType").value;
+  const resp = await fetch(`${API}/cert-configs/${typeId}/cancel`, {method: "POST"});
+  const body = await resp.json();
+  if (resp.status !== 200) { toast(body.detail || "取消失败", true); return; }
+  toast(body.message);
+  ccRefresh();
+};
+
+ccRefresh();
+</script>
+</body>
+</html>

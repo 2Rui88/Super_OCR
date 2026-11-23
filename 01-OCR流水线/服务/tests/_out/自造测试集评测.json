@@ -1,0 +1,519 @@
+{
+  "eval_id": 7,
+  "batch_id": 5,
+  "ground_truth_sha256": "ea133a30b2007c51e387fe33b33a3650e2e1f5cfb642db17500e7bca2dd60941",
+  "report": {
+    "files": 43,
+    "pending_files": [],
+    "field_accuracy": 0.967,
+    "correct_fields": 264,
+    "total_fields": 273,
+    "type_accuracy": 1.0,
+    "by_type": {
+      "身份证正面": {
+        "correct": 62,
+        "total": 66,
+        "accuracy": 0.9394
+      },
+      "身份证反面": {
+        "correct": 20,
+        "total": 20,
+        "accuracy": 1.0
+      },
+      "营业执照": {
+        "correct": 84,
+        "total": 88,
+        "accuracy": 0.9545
+      },
+      "驾驶证": {
+        "correct": 98,
+        "total": 99,
+        "accuracy": 0.9899
+      }
+    },
+    "by_field": {
+      "姓名": {
+        "correct": 21,
+        "total": 22,
+        "accuracy": 0.9545
+      },
+      "性别": {
+        "correct": 22,
+        "total": 22,
+        "accuracy": 1.0
+      },
+      "民族": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "出生日期": {
+        "correct": 20,
+        "total": 22,
+        "accuracy": 0.9091
+      },
+      "住址": {
+        "correct": 20,
+        "total": 22,
+        "accuracy": 0.9091
+      },
+      "公民身份号码": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "签发机关": {
+        "correct": 10,
+        "total": 10,
+        "accuracy": 1.0
+      },
+      "有效期限": {
+        "correct": 21,
+        "total": 21,
+        "accuracy": 1.0
+      },
+      "统一社会信用代码": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "名称": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "类型": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "法定代表人": {
+        "correct": 10,
+        "total": 11,
+        "accuracy": 0.9091
+      },
+      "经营范围": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "注册资本": {
+        "correct": 9,
+        "total": 11,
+        "accuracy": 0.8182
+      },
+      "成立日期": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "住所": {
+        "correct": 10,
+        "total": 11,
+        "accuracy": 0.9091
+      },
+      "证号": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "国籍": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "初次领证日期": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      },
+      "准驾车型": {
+        "correct": 11,
+        "total": 11,
+        "accuracy": 1.0
+      }
+    },
+    "wrong_fields_total": 9,
+    "wrong_fields_flagged": 6,
+    "wrong_field_flag_rate": 0.6667,
+    "planted_invalid_total": 7,
+    "planted_invalid_flagged": 7,
+    "planted_invalid_flag_rate": 1.0,
+    "items": [
+      {
+        "file": "id_front_00_scan.jpg",
+        "type_correct": true,
+        "correct": 6,
+        "total": 6,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_front_01_rotate.jpg",
+        "type_correct": true,
+        "correct": 5,
+        "total": 6,
+        "wrong_fields": [
+          "姓名"
+        ],
+        "wrong_fields_flagged": [
+          true
+        ]
+      },
+      {
+        "file": "id_front_02_perspective.jpg",
+        "type_correct": true,
+        "correct": 6,
+        "total": 6,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_front_03_blur.jpg",
+        "type_correct": true,
+        "correct": 6,
+        "total": 6,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_front_04_noise.jpg",
+        "type_correct": true,
+        "correct": 6,
+        "total": 6,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_front_05_glare.jpg",
+        "type_correct": true,
+        "correct": 6,
+        "total": 6,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_front_06_uneven.jpg",
+        "type_correct": true,
+        "correct": 6,
+        "total": 6,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_front_07_watermark.jpg",
+        "type_correct": true,
+        "correct": 4,
+        "total": 6,
+        "wrong_fields": [
+          "出生日期",
+          "住址"
+        ],
+        "wrong_fields_flagged": [
+          true,
+          false
+        ]
+      },
+      {
+        "file": "id_front_08_wrap.jpg",
+        "type_correct": true,
+        "correct": 5,
+        "total": 6,
+        "wrong_fields": [
+          "住址"
+        ],
+        "wrong_fields_flagged": [
+          false
+        ]
+      },
+      {
+        "file": "id_front_09_bad_number.jpg",
+        "type_correct": true,
+        "correct": 6,
+        "total": 6,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_front_10_bad_date.jpg",
+        "type_correct": true,
+        "correct": 6,
+        "total": 6,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_00_scan.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_01_rotate.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_02_perspective.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_03_blur.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_04_noise.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_05_glare.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_06_uneven.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_07_watermark.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_08_long_term.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "id_back_09_bad_period.jpg",
+        "type_correct": true,
+        "correct": 2,
+        "total": 2,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "license_00_scan.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 8,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "license_01_rotate.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 8,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "license_02_perspective.jpg",
+        "type_correct": true,
+        "correct": 5,
+        "total": 8,
+        "wrong_fields": [
+          "法定代表人",
+          "注册资本",
+          "住所"
+        ],
+        "wrong_fields_flagged": [
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "file": "license_03_blur.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 8,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "license_04_noise.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 8,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "license_05_glare.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 8,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "license_06_uneven.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 8,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "license_07_watermark.jpg",
+        "type_correct": true,
+        "correct": 7,
+        "total": 8,
+        "wrong_fields": [
+          "注册资本"
+        ],
+        "wrong_fields_flagged": [
+          false
+        ]
+      },
+      {
+        "file": "license_08_wrap.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 8,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "license_09_bad_number.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 8,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "license_10_bad_date.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 8,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_00_scan.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_01_rotate.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_02_perspective.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_03_blur.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_04_noise.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_05_glare.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_06_uneven.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_07_watermark.jpg",
+        "type_correct": true,
+        "correct": 8,
+        "total": 9,
+        "wrong_fields": [
+          "出生日期"
+        ],
+        "wrong_fields_flagged": [
+          true
+        ]
+      },
+      {
+        "file": "driver_08_wrap.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_09_bad_number.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      },
+      {
+        "file": "driver_10_bad_date.jpg",
+        "type_correct": true,
+        "correct": 9,
+        "total": 9,
+        "wrong_fields": [],
+        "wrong_fields_flagged": []
+      }
+    ]
+  }
+}

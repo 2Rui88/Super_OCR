@@ -1,0 +1,320 @@
+[
+  {
+    "file": "id_front_00_scan.jpg",
+    "cond": "scan",
+    "params": {},
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_01_rotate.jpg",
+    "cond": "rotate",
+    "params": {
+      "angle": -4.1
+    },
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_02_perspective.jpg",
+    "cond": "perspective",
+    "params": {
+      "shift": 27
+    },
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_03_blur.jpg",
+    "cond": "blur",
+    "params": {
+      "radius": 2.4
+    },
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_04_noise.jpg",
+    "cond": "noise",
+    "params": {
+      "sigma": 16
+    },
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_05_glare.jpg",
+    "cond": "glare",
+    "params": {
+      "center": [
+        584,
+        313
+      ]
+    },
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_06_uneven.jpg",
+    "cond": "uneven",
+    "params": {
+      "low": 0.55
+    },
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_07_watermark.jpg",
+    "cond": "watermark",
+    "params": {},
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_08_wrap.jpg",
+    "cond": "wrap",
+    "params": {},
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_09_bad_number.jpg",
+    "cond": "bad_number",
+    "params": {},
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_front_10_bad_date.jpg",
+    "cond": "bad_date",
+    "params": {},
+    "seed_key": "20261118:id_front"
+  },
+  {
+    "file": "id_back_00_scan.jpg",
+    "cond": "scan",
+    "params": {},
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "id_back_01_rotate.jpg",
+    "cond": "rotate",
+    "params": {
+      "angle": -6.6
+    },
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "id_back_02_perspective.jpg",
+    "cond": "perspective",
+    "params": {
+      "shift": 40
+    },
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "id_back_03_blur.jpg",
+    "cond": "blur",
+    "params": {
+      "radius": 2.4
+    },
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "id_back_04_noise.jpg",
+    "cond": "noise",
+    "params": {
+      "sigma": 16
+    },
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "id_back_05_glare.jpg",
+    "cond": "glare",
+    "params": {
+      "center": [
+        611,
+        390
+      ]
+    },
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "id_back_06_uneven.jpg",
+    "cond": "uneven",
+    "params": {
+      "low": 0.55
+    },
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "id_back_07_watermark.jpg",
+    "cond": "watermark",
+    "params": {},
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "id_back_08_long_term.jpg",
+    "cond": "long_term",
+    "params": {},
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "id_back_09_bad_period.jpg",
+    "cond": "bad_period",
+    "params": {},
+    "seed_key": "20261118:id_back"
+  },
+  {
+    "file": "license_00_scan.jpg",
+    "cond": "scan",
+    "params": {},
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_01_rotate.jpg",
+    "cond": "rotate",
+    "params": {
+      "angle": 6.8
+    },
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_02_perspective.jpg",
+    "cond": "perspective",
+    "params": {
+      "shift": 42
+    },
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_03_blur.jpg",
+    "cond": "blur",
+    "params": {
+      "radius": 2.4
+    },
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_04_noise.jpg",
+    "cond": "noise",
+    "params": {
+      "sigma": 16
+    },
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_05_glare.jpg",
+    "cond": "glare",
+    "params": {
+      "center": [
+        206,
+        290
+      ]
+    },
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_06_uneven.jpg",
+    "cond": "uneven",
+    "params": {
+      "low": 0.55
+    },
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_07_watermark.jpg",
+    "cond": "watermark",
+    "params": {},
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_08_wrap.jpg",
+    "cond": "wrap",
+    "params": {},
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_09_bad_number.jpg",
+    "cond": "bad_number",
+    "params": {},
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "license_10_bad_date.jpg",
+    "cond": "bad_date",
+    "params": {},
+    "seed_key": "20261118:license"
+  },
+  {
+    "file": "driver_00_scan.jpg",
+    "cond": "scan",
+    "params": {},
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_01_rotate.jpg",
+    "cond": "rotate",
+    "params": {
+      "angle": 6.3
+    },
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_02_perspective.jpg",
+    "cond": "perspective",
+    "params": {
+      "shift": 37
+    },
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_03_blur.jpg",
+    "cond": "blur",
+    "params": {
+      "radius": 2.4
+    },
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_04_noise.jpg",
+    "cond": "noise",
+    "params": {
+      "sigma": 16
+    },
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_05_glare.jpg",
+    "cond": "glare",
+    "params": {
+      "center": [
+        236,
+        256
+      ]
+    },
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_06_uneven.jpg",
+    "cond": "uneven",
+    "params": {
+      "low": 0.55
+    },
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_07_watermark.jpg",
+    "cond": "watermark",
+    "params": {},
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_08_wrap.jpg",
+    "cond": "wrap",
+    "params": {},
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_09_bad_number.jpg",
+    "cond": "bad_number",
+    "params": {},
+    "seed_key": "20261118:driver"
+  },
+  {
+    "file": "driver_10_bad_date.jpg",
+    "cond": "bad_date",
+    "params": {},
+    "seed_key": "20261118:driver"
+  }
+]

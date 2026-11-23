@@ -1,0 +1,13 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.cache/
+.venv-*/
+
+# 测试运行产物（日志不入库，结果 JSON 保留作为证据）
+tests/_out/*.log
+
+# 服务运行产物：任务库与上传件不入库
+data/
+uploads/

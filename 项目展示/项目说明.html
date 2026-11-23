@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>项目展示 · OCR 流水线 × 制度知识库</title>
+<style>
+  :root { --blue:#3b6ef5; --ink:#1f2329; --ink2:#4e5969; --line:#e5e8ef; --bg:#f4f6fb; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.7; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
+  header.hero { background: linear-gradient(135deg, #2953d6, #3b6ef5 55%, #5d8bf7); color: #fff; border-radius: 18px; padding: 40px 44px; margin-bottom: 28px; }
+  header.hero h1 { font-size: 30px; margin-bottom: 10px; }
+  header.hero p { opacity: .92; font-size: 15px; max-width: 860px; }
+  .databar { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+  .databar .d { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: 10px 18px; min-width: 150px; }
+  .databar b { display: block; font-size: 22px; }
+  .databar span { font-size: 12px; opacity: .9; }
+  h2.sec { font-size: 22px; margin: 40px 0 6px; display: flex; align-items: center; gap: 10px; }
+  h2.sec .no { background: var(--blue); color: #fff; border-radius: 8px; font-size: 14px; padding: 2px 10px; }
+  p.secdesc { color: var(--ink2); font-size: 14px; margin-bottom: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .card img { width: 100%; display: block; border-bottom: 1px solid var(--line); cursor: zoom-in; transition: filter .15s; }
+  .card:hover img { filter: brightness(.96); }
+  .card .zoom-hint { position: relative; }
+  .zoom-hint::after { content: "⤢ 点击放大"; position: absolute; right: 10px; bottom: 10px; background: rgba(31,35,41,.68); color: #fff; font-size: 12px; padding: 3px 10px; border-radius: 6px; opacity: 0; transition: opacity .15s; pointer-events: none; }
+  .card:hover .zoom-hint::after { opacity: 1; }
+
+  /* ---------- 灯箱 ---------- */
+  .lightbox { position: fixed; inset: 0; background: rgba(13,17,26,.88); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .lightbox.on { display: flex; }
+  .lightbox img { max-width: 96vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 18px 70px rgba(0,0,0,.55); }
+  .lb-cap { position: absolute; left: 50%; transform: translateX(-50%); bottom: 26px; color: #fff; font-size: 14px; background: rgba(31,35,41,.7); padding: 6px 18px; border-radius: 8px; max-width: 80vw; text-align: center; }
+  .lb-count { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.75); font-size: 13px; letter-spacing: 1px; }
+  .lb-close { position: absolute; top: 18px; right: 26px; background: none; border: 0; color: #fff; font-size: 30px; cursor: pointer; line-height: 1; opacity: .8; }
+  .lb-close:hover { opacity: 1; }
+  .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.12); border: 0; color: #fff; font-size: 34px; cursor: pointer; border-radius: 50%; width: 52px; height: 52px; }
+  .lb-nav:hover { background: rgba(255,255,255,.25); }
+  .lb-prev { left: 22px; } .lb-next { right: 22px; }
+  .card .body { padding: 14px 18px 16px; }
+  .card h3 { font-size: 16px; margin-bottom: 6px; }
+  .card h3 .tag { font-size: 11px; color: var(--blue); background: #e8effe; border-radius: 6px; padding: 1px 8px; margin-left: 8px; vertical-align: 2px; }
+  .card p { font-size: 13px; color: var(--ink2); }
+  .card.wide { grid-column: 1 / -1; }
+  .vs { display: grid; grid-template-columns: 1fr 60px 1fr; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 22px 26px; margin: 14px 0 6px; }
+  .vs .sys { text-align: center; }
+  .vs .sys b { display: block; font-size: 17px; color: var(--blue); }
+  .vs .sys span { font-size: 12.5px; color: var(--ink2); }
+  .vs .arrow { text-align: center; font-size: 26px; color: var(--blue); }
+  .vs .arrow small { display: block; font-size: 11px; color: var(--ink2); }
+  table.kpi { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 13.5px; }
+  table.kpi th { background: #f0f4fd; text-align: left; padding: 9px 14px; }
+  table.kpi td { padding: 9px 14px; border-top: 1px solid var(--line); }
+  table.kpi td.n { font-weight: 600; color: var(--blue); white-space: nowrap; }
+  footer { margin-top: 44px; color: var(--ink2); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>OCR 流水线 × 制度知识库</h1>
+  <p>一套跑在 RTX 4090D 上的企业文档智能处理组合：项目一负责「看得清」——证件与文档的高精度 OCR 识别、校验与量化评测；项目二负责「用得上」——制度文档的自动摄入、语义检索与带出处的智能问答。两个系统通过接口闭环联动：知识库上传的每一份文档，都由 OCR 流水线在 GPU 上完成真实识别。</p>
+  <div class="databar">
+    <div class="d"><b>96.70%</b><span>证件字段准确率（43 张基线验收）</span></div>
+    <div class="d"><b>100%</b><span>证件类型判断（43/43）</span></div>
+    <div class="d"><b>2.29 张/s</b><span>证件识别吞吐（4 GPU worker）</span></div>
+    <div class="d"><b>50/50</b><span>混合文档批处理零失败</span></div>
+    <div class="d"><b>4 项 100%</b><span>知识库问答评测全绿</span></div>
+    <div class="d"><b>≈4 秒</b><span>文档摄入→OCR→可检索 端到端</span></div>
+  </div>
+</header>
+
+<h2 class="sec"><span class="no">项目一</span>OCR 流水线 —— 证件与文档识别</h2>
+<p class="secdesc">双引擎架构：证件识别 + 文档版面分析，统一文档链路逐页结构化；从单张识别到百级批量评测、从规则校验到流水线配置，全链路可视化。</p>
+<div class="grid">
+  <div class="card">
+    <img src="images/p1_证件识别_结构化字段卡.png" alt="证件识别·字段卡">
+    <div class="body">
+      <h3>证件识别<span class="tag">结构化字段卡</span></h3>
+      <p>身份证 / 驾驶证 / 营业执照等证件自动分类，字段级抽取为结构化卡片：姓名、性别、出生日期、住址、证号逐项带置信度与合规校验，识别质量一眼可判。</p>
+    </div>
+  </div>
+  <div class="card">
+    <img src="images/p1_证件识别_字段与JSON.png" alt="证件识别·JSON对照">
+    <div class="body">
+      <h3>识别详情<span class="tag">JSON 全量对照</span></h3>
+      <p>三栏工作台：左侧待识别文件列表，中间结构化字段卡，右侧完整 JSON 结果面板——业务侧取字段、系统侧对接接口，同一屏各取所需。</p>
+    </div>
+  </div>
+  <div class="card">
+    <img src="images/p1_评测总览_错误定位.png" alt="评测总览">
+    <div class="body">
+      <h3>评测总览<span class="tag">错误定位</span></h3>
+      <p>顶部指标卡汇总总数与失败数，任务进度实时可见；文档预览与结构化结果逐页对照，识别有误的位置直接在原文上红框标出，质检不用肉眼逐行比对。</p>
+    </div>
+  </div>
+  <div class="card">
+    <img src="images/p1_批量评测_明细列表.png" alt="批量评测明细">
+    <div class="body">
+      <h3>批量评测<span class="tag">百级文件</span></h3>
+      <p>百级规模批量评测实测：统计卡汇总文件数、失败数与平均耗时，逐文件明细列出识别耗时、置信度与通过 / 失败状态，单个失败不连坐、可单独重试。</p>
+    </div>
+  </div>
+  <div class="card">
+    <img src="images/p1_评测明细_逐文件对照.png" alt="逐文件对照">
+    <div class="body">
+      <h3>逐文件对照<span class="tag">图文互证</span></h3>
+      <p>文件列表与文档原图预览、识别结果三区联动：选中任一文件，原图与结构化结果同步呈现，正确与错误都有据可查，评测结果可回溯、可复核。</p>
+    </div>
+  </div>
+  <div class="card">
+    <img src="images/p1_流水线配置_YAML.png" alt="流水线配置">
+    <div class="body">
+      <h3>流水线配置<span class="tag">YAML 可插拔</span></h3>
+      <p>识别规则 YAML 化：检测、识别、后处理各节点参数在线编辑，改完即可用真实测试集重跑回测；规则与代码解耦，运营同学也能自主调优。</p>
+    </div>
+  </div>
+</div>
+
+<h2 class="sec"><span class="no">项目二</span>制度知识库 —— 检索与问答</h2>
+<p class="secdesc">文档摄入自动调用项目一完成 OCR 与结构化切块；问答回答必附出处、查无明确说，每个引用都能回跳原文。</p>
+<div class="grid">
+  <div class="card wide">
+    <img src="images/p2_智能问答_原文预览.png" alt="智能问答·原文预览">
+    <div class="body">
+      <h3>智能问答<span class="tag">附出处 · 原文预览</span></h3>
+      <p>自然语言提问，流式生成回答并标注引用编号；答案旁边直接展开原始制度文档页面预览——「答案说了什么」与「原文写在哪」同屏互证。资料不足以回答时明确说「没有找到相关规定」，绝不编造。</p>
+    </div>
+  </div>
+  <div class="card wide">
+    <img src="images/p2_文档解析_表格定位.png" alt="文档解析·表格定位">
+    <div class="body">
+      <h3>文档解析<span class="tag">章节大纲 · 表格定位</span></h3>
+      <p>制度文档自动解析：章节大纲树导航、正文段落与表格在原文页面上框选高亮，复杂表格结构原样保留——检索到的每一条规定都能精确定位到原文位置。</p>
+    </div>
+  </div>
+</div>
+
+<h2 class="sec"><span class="no">联动</span>两个系统如何咬合</h2>
+<div class="vs">
+  <div class="sys"><b>项目一 · OCR 流水线</b><span>GPU 识别 / 校验 / 评测 / 配置可插拔<br>:8700</span></div>
+  <div class="arrow">⇄<small>HTTP API</small></div>
+  <div class="sys"><b>项目二 · 制度知识库</b><span>摄入 / 切块 / 检索 / 问答 / 出处回跳<br>:8800</span></div>
+</div>
+<p class="secdesc">项目二上传的每一份扫描件与 Office 文档，都由项目一的 GPU worker 完成真实识别（非本地假数据）；识别结果回流切块入库，问答检索的每个引用块都能回跳到原文页与坐标框。同一台 4090D 上双服务并行，端到端约 4 秒。</p>
+
+<h2 class="sec">关键指标一览</h2>
+<table class="kpi">
+  <tr><th>指标</th><th>数值</th><th>口径</th></tr>
+  <tr><td>证件字段准确率</td><td class="n">96.70%（264/273）</td><td>43 张全劣化条件基线集，旋转/模糊/反光/水印/弯折全覆盖</td></tr>
+  <tr><td>证件类型判断</td><td class="n">100%</td><td>43/43，含多类证件混合</td></tr>
+  <tr><td>证件识别吞吐</td><td class="n">2.29 张/s</td><td>4 × GPU worker 并行，压测均值</td></tr>
+  <tr><td>文档批处理</td><td class="n">50/50 零失败</td><td>扫描 PDF + Word + Excel + PPT 混合批次</td></tr>
+  <tr><td>知识库问答评测</td><td class="n">总正确率 / 出处 / 表格 / 查无 均 100%</td><td>标准问答对批量回测</td></tr>
+  <tr><td>摄入到可检索</td><td class="n">≈ 4 秒</td><td>上传 → OCR 全链路 → 切块入索引</td></tr>
+  <tr><td>配置热切换</td><td class="n">秒级</td><td>规则 YAML 新版上线，worker 无需重启</td></tr>
+</table>
+
+<footer>截屏来自系统真实运行界面 · 2026-11</footer>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" id="lbClose" title="关闭 (Esc)">×</button>
+  <button class="lb-nav lb-prev" id="lbPrev" title="上一张 (←)">‹</button>
+  <img id="lbImg" alt="">
+  <button class="lb-nav lb-next" id="lbNext" title="下一张 (→)">›</button>
+  <div class="lb-count" id="lbCount"></div>
+  <div class="lb-cap" id="lbCap"></div>
+</div>
+
+<script>
+(function () {
+  var cards = Array.from(document.querySelectorAll(".card"));
+  var items = [];
+  cards.forEach(function (card) {
+    var img = card.querySelector("img");
+    if (!img) return;
+    img.parentElement.classList.add("zoom-hint");
+    var title = (card.querySelector("h3")?.textContent || "").trim();
+    items.push({ src: img.getAttribute("src"), title: title });
+    img.addEventListener("click", function () { open(items.findIndex(function (it) { return it.src === img.getAttribute("src"); })); });
+  });
+
+  var box = document.getElementById("lightbox"),
+      lbImg = document.getElementById("lbImg"),
+      lbCap = document.getElementById("lbCap"),
+      lbCount = document.getElementById("lbCount");
+  var cur = 0;
+
+  function render() {
+    var it = items[cur];
+    lbImg.src = it.src;
+    lbCap.textContent = it.title;
+    lbCount.textContent = (cur + 1) + " / " + items.length;
+  }
+  function open(i) { cur = Math.max(0, Math.min(i, items.length - 1)); render(); box.classList.add("on"); }
+  function close() { box.classList.remove("on"); }
+  function step(d) { cur = (cur + d + items.length) % items.length; render(); }
+
+  document.getElementById("lbClose").addEventListener("click", close);
+  document.getElementById("lbPrev").addEventListener("click", function (e) { e.stopPropagation(); step(-1); });
+  document.getElementById("lbNext").addEventListener("click", function (e) { e.stopPropagation(); step(1); });
+  box.addEventListener("click", function (e) { if (e.target === box || e.target === lbImg) close(); });
+  document.addEventListener("keydown", function (e) {
+    if (!box.classList.contains("on")) return;
+    if (e.key === "Escape") close();
+    else if (e.key === "ArrowLeft") step(-1);
+    else if (e.key === "ArrowRight") step(1);
+  });
+})();
+</script>
+</body>
+</html>

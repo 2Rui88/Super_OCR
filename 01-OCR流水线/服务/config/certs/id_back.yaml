@@ -1,0 +1,21 @@
+# 身份证反面（国徽面）
+type_id: id_back
+name: 身份证反面
+
+classification:
+  required: [签发机关]
+  positive: [居民身份证, 中华人民共和国, 有效期限]
+  negative: [公民身份号码, 机动车驾驶证, 营业执照]   # 反面不出现证号
+
+fields:
+  - name: 签发机关
+    anchors: [签发机关]
+    position: next_line
+    multi_line: true
+  - name: 有效期限
+    anchors: [有效期限, 有效期]
+    type: period                    # 形如 2015.01.01-2035.01.01 或 -长期
+
+cross_checks:
+  - kind: period_order              # 起 <= 止
+    field: 有效期限

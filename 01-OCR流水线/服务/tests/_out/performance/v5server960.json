@@ -1,0 +1,501 @@
+{
+  "profile": "v5server960",
+  "options": {
+    "use_doc_orientation_classify": true,
+    "use_doc_unwarping": true,
+    "use_textline_orientation": true,
+    "device": "cpu",
+    "text_detection_model_name": "PP-OCRv5_server_det",
+    "text_recognition_model_name": "PP-OCRv5_server_rec",
+    "enable_mkldnn": true,
+    "cpu_threads": 4,
+    "text_det_limit_side_len": 960,
+    "text_det_limit_type": "max"
+  },
+  "runtime_path": "C:\\Users\\Wren-GS\\AppData\\Local\\Temp\\ocr-perf-paddle322",
+  "versions": {
+    "paddlepaddle": "3.2.2",
+    "paddleocr": "3.7.0",
+    "paddlex": "3.7.2"
+  },
+  "python": "3.11.9",
+  "platform": "Windows-10-10.0.26100-SP0",
+  "started_at": "2026-11-18T11:51:18+0800",
+  "source_sha256": {
+    "app/__init__.py": "e4e6ef763a49eb4f52181e1e5eb922eb6f499cf8a594e2456bf69075c6810bb0",
+    "app/certs/__init__.py": "0d2b1d6d688b9062694c96637fb2cea409d896730eaaa3dc420f912956a542cd",
+    "app/certs/loader.py": "194976a9881b53766f6680ba5bc51dbfc535059a53883948dbfc618b2ad50b37",
+    "app/certs/validators.py": "73e602ac301460a1d62cbb8be8aa13d547933a5a771394346d2ac8be40709b20",
+    "app/contracts/__init__.py": "cc2b2e320d8a3be425b881a49782a3c97821bc5840d2831708f890595a03387d",
+    "app/contracts/models.py": "63666a11c5c659c6727b3a494d63d6147a10c0fe491a8d7692c633e4955274b3",
+    "app/core/__init__.py": "8b68754f874bfa7cd9d11ac51efd7040c7af2f725eae67be3c0f4d01a8276f2a",
+    "app/core/card_pipeline.py": "f310511c8853ae485b9da59deefcb2f8f63de0b2c563a06d26134d15121b7c28",
+    "app/core/card_service.py": "b2e1e735906fd06d4564b706666d3b19bf73e39b92a89fa651ba41f266058608",
+    "app/core/document_pipeline.py": "6f6e6de5a9ffee1f1cc700f766c6a49b03e0de8d871e40b2ae0433e2df42a9b3",
+    "app/engine/__init__.py": "77dab31ec3d7f9734dcea4a37d271993b0efdd324b025ef8b9b3a612cf9acd60",
+    "app/engine/base.py": "ed5c38f5c864cf10ce3da1efca2e0bc782d129b77fbfacb24720aed4d71ab45d",
+    "app/engine/paddle_card.py": "0a4862f860c19650e119ef04b86a2477f274293518444e9947a9db68ec94e2fd"
+  },
+  "ground_truth_sha256": "b4ab070d955441492a1e3a2e8ef78f08311dbaf66ec29b6591612b259b65778f",
+  "cache_enabled": false,
+  "repeats": 1,
+  "items": [
+    {
+      "file": "id_front_0_scan.jpg",
+      "repeat": 0,
+      "seconds": 46.45877549983561,
+      "stages_seconds": {
+        "orientation": 0.07161700027063489,
+        "unwarp": 1.2927279002033174,
+        "detection": 9.543817900121212,
+        "line_orientation": 0.2125414004549384,
+        "recognition": 35.08164480002597
+      },
+      "type_correct": true,
+      "correct": 3,
+      "total": 6,
+      "wrong_fields": [
+        "姓名",
+        "性别",
+        "住址"
+      ],
+      "wrong_flagged": 3,
+      "result": {
+        "file_sha256": "4301ab79e8c3037d4f37644291af1198b7352d667f2acd08a438736bc2e4a075",
+        "filename": "id_front_0_scan.jpg",
+        "doc_type": "id_front",
+        "doc_type_cn": "身份证正面",
+        "type_confidence": 1.0,
+        "fields": [
+          {
+            "name": "姓名",
+            "value": "欧阳喆:",
+            "confidence": 0.6011,
+            "bbox": [
+              0.10105140186915888,
+              0.08796296296296297,
+              1.0,
+              0.8324074074074074
+            ],
+            "validation": {
+              "passed": true,
+              "errors": []
+            },
+            "needs_review": true
+          },
+          {
+            "name": "性别",
+            "value": "男:",
+            "confidence": 0.6011,
+            "bbox": [
+              0.10105140186915888,
+              0.08796296296296297,
+              1.0,
+              0.8324074074074074
+            ],
+            "validation": {
+              "passed": false,
+              "errors": [
+                "取值'男:'不在允许列表 ['男', '女'] 内"
+              ]
+            },
+            "needs_review": true
+          },
+          {
+            "name": "民族",
+            "value": "汉",
+            "confidence": 0.9988,
+            "bbox": [
+              0.21261682242990654,
+              0.225,
+              0.3510514018691589,
+              0.2898148148148148
+            ],
+            "validation": {
+              "passed": true,
+              "errors": []
+            },
+            "needs_review": false
+          },
+          {
+            "name": "出生日期",
+            "value": "1996年3月14日",
+            "confidence": 0.6011,
+            "bbox": [
+              0.09988317757009346,
+              0.08796296296296297,
+              1.0,
+              0.8324074074074074
+            ],
+            "validation": {
+              "passed": true,
+              "errors": []
+            },
+            "needs_review": true
+          },
+          {
+            "name": "住址",
+            "value": "示例省示例市滨河区望江路128大:",
+            "confidence": 0.5375,
+            "bbox": [
+              0.09813084112149532,
+              0.08796296296296297,
+              1.0,
+              0.8324074074074074
+            ],
+            "validation": {
+              "passed": true,
+              "errors": []
+            },
+            "needs_review": true
+          },
+          {
+            "name": "公民身份号码",
+            "value": "999901199603146917",
+            "confidence": 0.9983,
+            "bbox": [
+              0.21320093457943926,
+              0.8185185185185185,
+              0.6530373831775701,
+              0.8870370370370371
+            ],
+            "validation": {
+              "passed": false,
+              "errors": [
+                "校验位错误，期望 9，识别为 7"
+              ]
+            },
+            "needs_review": true
+          }
+        ],
+        "issues": [
+          "性别：取值'男:'不在允许列表 ['男', '女'] 内",
+          "公民身份号码：校验位错误，期望 9，识别为 7",
+          "姓名：置信度低（0.6011），建议人工复核",
+          "出生日期：置信度低（0.6011），建议人工复核",
+          "住址：置信度低（0.5375），建议人工复核"
+        ],
+        "duration_ms": 46458
+      },
+      "lines": [
+        {
+          "text": "欧阳喆",
+          "bbox": [
+            0.10105140186915888,
+            0.09537037037037037,
+            0.23656542056074767,
+            0.17685185185185184
+          ],
+          "confidence": 0.9996762275695801
+        },
+        {
+          "text": ":",
+          "bbox": [
+            0.6296728971962616,
+            0.08796296296296297,
+            1,
+            0.8324074074074074
+          ],
+          "confidence": 0.6010556817054749
+        },
+        {
+          "text": "姓名",
+          "bbox": [
+            0.002336448598130841,
+            0.10185185185185185,
+            0.07301401869158879,
+            0.15833333333333333
+          ],
+          "confidence": 0.9996674060821533
+        },
+        {
+          "text": "性别",
+          "bbox": [
+            0,
+            0.22407407407407406,
+            0.06658878504672897,
+            0.2796296296296296
+          ],
+          "confidence": 0.9969403147697449
+        },
+        {
+          "text": "男",
+          "bbox": [
+            0.10105140186915888,
+            0.225,
+            0.14077102803738317,
+            0.2833333333333333
+          ],
+          "confidence": 0.9999172687530518
+        },
+        {
+          "text": "民族汉",
+          "bbox": [
+            0.21261682242990654,
+            0.225,
+            0.3510514018691589,
+            0.2898148148148148
+          ],
+          "confidence": 0.9987770915031433
+        },
+        {
+          "text": "出生",
+          "bbox": [
+            0,
+            0.3453703703703704,
+            0.06366822429906542,
+            0.4027777777777778
+          ],
+          "confidence": 0.9991934895515442
+        },
+        {
+          "text": "1996年3月14日",
+          "bbox": [
+            0.09988317757009346,
+            0.3416666666666667,
+            0.397196261682243,
+            0.4111111111111111
+          ],
+          "confidence": 0.9991949796676636
+        },
+        {
+          "text": "大",
+          "bbox": [
+            0.5268691588785047,
+            0.38796296296296295,
+            0.6384345794392523,
+            0.5
+          ],
+          "confidence": 0.5375235676765442
+        },
+        {
+          "text": "住址",
+          "bbox": [
+            0,
+            0.4685185185185185,
+            0.06483644859813084,
+            0.525
+          ],
+          "confidence": 0.9996297359466553
+        },
+        {
+          "text": "示例省示例市滨河区望江路128",
+          "bbox": [
+            0.09813084112149532,
+            0.4666666666666667,
+            0.5998831775700935,
+            0.5342592592592592
+          ],
+          "confidence": 0.998418927192688
+        },
+        {
+          "text": "号锦绣花园7栋2单元603室",
+          "bbox": [
+            0.09871495327102804,
+            0.5388888888888889,
+            0.5251168224299065,
+            0.6101851851851852
+          ],
+          "confidence": 0.9974008202552795
+        },
+        {
+          "text": "公民身份号码",
+          "bbox": [
+            0.017523364485981307,
+            0.8185185185185185,
+            0.1927570093457944,
+            0.8740740740740741
+          ],
+          "confidence": 0.9966043829917908
+        },
+        {
+          "text": "999901199603146917",
+          "bbox": [
+            0.21320093457943926,
+            0.8185185185185185,
+            0.6530373831775701,
+            0.8870370370370371
+          ],
+          "confidence": 0.9982602596282959
+        },
+        {
+          "text": "则试样本仅供OCR评测",
+          "bbox": [
+            0,
+            0.9703703703703703,
+            0.22371495327102803,
+            1
+          ],
+          "confidence": 0.9269039034843445
+        }
+      ]
+    },
+    {
+      "file": "id_back_0_scan.jpg",
+      "repeat": 0,
+      "seconds": 33.220718999858946,
+      "stages_seconds": {
+        "orientation": 0.014709599781781435,
+        "unwarp": 1.4212815999053419,
+        "detection": 9.483856100123376,
+        "line_orientation": 0.1360587002709508,
+        "recognition": 21.96877699997276
+      },
+      "type_correct": true,
+      "correct": 2,
+      "total": 2,
+      "wrong_fields": [],
+      "wrong_flagged": 0,
+      "result": {
+        "file_sha256": "f26e2bb145313764e0918bb9b63d78c7f100ff70e37d0e2f5eac63134d992160",
+        "filename": "id_back_0_scan.jpg",
+        "doc_type": "id_back",
+        "doc_type_cn": "身份证反面",
+        "type_confidence": 1.0,
+        "fields": [
+          {
+            "name": "签发机关",
+            "value": "示例市公安局示例分局",
+            "confidence": 0.9989,
+            "bbox": [
+              0.33936915887850466,
+              0.6546296296296297,
+              0.7219626168224299,
+              0.7240740740740741
+            ],
+            "validation": {
+              "passed": true,
+              "errors": []
+            },
+            "needs_review": false
+          },
+          {
+            "name": "有效期限",
+            "value": "2020.07.26-2040.07.26",
+            "confidence": 0.9978,
+            "bbox": [
+              0.34345794392523366,
+              0.7861111111111111,
+              0.7342289719626168,
+              0.8490740740740741
+            ],
+            "validation": {
+              "passed": true,
+              "errors": []
+            },
+            "needs_review": false
+          }
+        ],
+        "issues": [],
+        "duration_ms": 33218
+      },
+      "lines": [
+        {
+          "text": "中华人民共和国",
+          "bbox": [
+            0.22371495327102803,
+            0.09166666666666666,
+            0.6460280373831776,
+            0.20925925925925926
+          ],
+          "confidence": 0.9975585341453552
+        },
+        {
+          "text": "案占位",
+          "bbox": [
+            0,
+            0.17592592592592593,
+            0.1133177570093458,
+            0.23333333333333334
+          ],
+          "confidence": 0.9967686533927917
+        },
+        {
+          "text": "居民身份证",
+          "bbox": [
+            0.2330607476635514,
+            0.22777777777777777,
+            0.6232476635514018,
+            0.37037037037037035
+          ],
+          "confidence": 0.9977862238883972
+        },
+        {
+          "text": "试样本",
+          "bbox": [
+            0.23422897196261683,
+            0.3537037037037037,
+            0.6325934579439252,
+            0.7027777777777777
+          ],
+          "confidence": 0.9974425435066223
+        },
+        {
+          "text": "测",
+          "bbox": [
+            0.14544392523364486,
+            0.537962962962963,
+            0.31133177570093457,
+            0.7111111111111111
+          ],
+          "confidence": 0.9745684862136841
+        },
+        {
+          "text": "签发机关",
+          "bbox": [
+            0.1594626168224299,
+            0.6694444444444444,
+            0.29147196261682246,
+            0.7222222222222222
+          ],
+          "confidence": 0.9978437423706055
+        },
+        {
+          "text": "示例市公安局示例分局",
+          "bbox": [
+            0.33936915887850466,
+            0.6546296296296297,
+            0.7219626168224299,
+            0.7240740740740741
+          ],
+          "confidence": 0.998934268951416
+        },
+        {
+          "text": "2020.07.26-2040.07.26",
+          "bbox": [
+            0.34345794392523366,
+            0.7861111111111111,
+            0.7342289719626168,
+            0.8490740740740741
+          ],
+          "confidence": 0.9978008270263672
+        },
+        {
+          "text": "有效期限",
+          "bbox": [
+            0.16647196261682243,
+            0.8027777777777778,
+            0.2955607476635514,
+            0.8555555555555555
+          ],
+          "confidence": 0.9998851418495178
+        },
+        {
+          "text": "试样本仅供OCR评测",
+          "bbox": [
+            0,
+            0.9703703703703703,
+            0.21261682242990654,
+            1
+          ],
+          "confidence": 0.9726403951644897
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "complete": false,
+  "initialization_seconds": 13.232652999926358,
+  "status": "rejected_early",
+  "rejection_reason": "First ID-front sample regressed to 3/6 fields and took 46.46s; balanced medium already achieved 6/6 in 26-27s. Stopped after two completed samples; not a full-dataset accuracy result."
+}

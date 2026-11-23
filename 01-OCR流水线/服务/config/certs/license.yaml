@@ -1,0 +1,33 @@
+# 营业执照
+type_id: license
+name: 营业执照
+
+classification:
+  required: [营业执照]
+  positive: [统一社会信用代码, 法定代表人, 成立日期, 经营范围, 注册资本, 住所, 市场监督管理局]
+  negative: [机动车驾驶证]
+
+fields:
+  - name: 统一社会信用代码
+    anchors: [统一社会信用代码, 信用代码]
+    type: uscc
+    pattern: '[0-9A-HJ-NPQRTUWXY]{18}'
+  - name: 名称
+    anchors: [名称]
+  - name: 类型
+    anchors: [类型]
+  - name: 法定代表人
+    anchors: [法定代表人, 负责人]
+  - name: 经营范围
+    anchors: [经营范围]
+    multi_line: true
+  - name: 注册资本
+    anchors: [注册资本]
+    # 执照上是大写中文金额（如"伍佰万圆整"），不做数字强校验
+    type: text
+  - name: 成立日期
+    anchors: [成立日期, 注册日期]
+    type: date
+  - name: 住所
+    anchors: [住所, 住所地, 经营场所]
+    multi_line: true

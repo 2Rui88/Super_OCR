@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="feishu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>线框图</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.9.1/fonts/remixicon.css">
+<style>/* 样式件
+   底稿，生成时不改。主题只由 <html data-theme> 决定，主题块里只有变量；
+   组件只引用变量，主题块之外不写颜色字面量。
+   带 fallback 的变量（--wf-dash、--wf-link-deco、--wf-side-edge、--wf-mark）按需定义，其余四套都要有。 */
+
+/* ───────── 主题 ───────── */
+[data-theme=mono]{--wf-scheme:light;
+  --wf-canvas:#e6e6e6;--wf-bg:#f5f5f5;--wf-card:#fff;--wf-muted:#f5f5f5;
+  --wf-side:#f5f5f5;--wf-side-ink:#333;--wf-nav-on-bg:#333;--wf-nav-on-ink:#fff;
+  --wf-ink:#333;--wf-ink2:#666;--wf-ink3:#999;
+  --wf-line:#ddd;--wf-edge:#333;--wf-edge-w:2px;--wf-ctl:#333;
+  --wf-p:#333;--wf-p-ink:#fff;--wf-p-soft:#f5f5f5;--wf-link:#333;--wf-link-deco:underline;
+  --wf-ok:#333;--wf-warn:#555;--wf-err:#333;--wf-dash:dashed;--wf-note:#777;
+  --wf-r:0px;--wf-r2:0px;--wf-shadow:none;--wf-shadow2:none;--wf-scrim:rgb(0 0 0 / .3);
+  --wf-device:#333;--wf-device-w:2px;--wf-device-r:0px}
+[data-theme=feishu]{--wf-scheme:light;
+  --wf-canvas:hsl(216 22% 92%);--wf-bg:hsl(216 38% 97%);--wf-card:#fff;--wf-muted:hsl(216 22% 96.5%);
+  --wf-side:hsl(216 40% 98.5%);--wf-side-ink:hsl(216 14% 14%);
+  --wf-nav-on-bg:linear-gradient(90deg,hsl(222 100% 60% / .12),hsl(222 100% 60% / .05));--wf-nav-on-ink:hsl(222 80% 51%);
+  --wf-ink:hsl(216 14% 14%);--wf-ink2:hsl(216 7% 42%);--wf-ink3:hsl(216 7% 59%);
+  --wf-line:hsl(220 15% 92%);--wf-edge:hsl(220 15% 92%);--wf-edge-w:1px;--wf-ctl:hsl(220 15% 86%);
+  --wf-p:hsl(222 100% 60%);--wf-p-ink:#fff;--wf-p-soft:hsl(222 100% 97%);--wf-link:hsl(222 100% 60%);
+  --wf-ok:hsl(152 76% 40%);--wf-warn:hsl(38 92% 50%);--wf-err:hsl(0 84% 60%);--wf-note:hsl(45 100% 50%);
+  --wf-r:8px;--wf-r2:16px;--wf-shadow:0 1px 2px hsl(216 14% 14% / .04),0 8px 24px -12px hsl(222 100% 60% / .12);
+  --wf-shadow2:0 2px 6px hsl(216 30% 20% / .06),0 24px 48px -20px hsl(216 30% 20% / .3);--wf-scrim:hsl(216 30% 10% / .45);
+  --wf-device:hsl(216 14% 14%);--wf-device-w:11px;--wf-device-r:46px}
+[data-theme=navy]{--wf-scheme:light;
+  --wf-canvas:hsl(220 16% 91%);--wf-bg:hsl(220 27% 97%);--wf-card:#fff;--wf-muted:hsl(220 14% 96%);
+  --wf-side:hsl(226 60% 21%);--wf-side-ink:hsl(0 0% 100% / .84);--wf-side-edge:transparent;--wf-mark:hsl(0 0% 100% / .92);
+  --wf-nav-on-bg:hsl(222 55% 54%);--wf-nav-on-ink:#fff;
+  --wf-ink:hsl(220 39% 11%);--wf-ink2:hsl(215 16% 47%);--wf-ink3:hsl(215 14% 64%);
+  --wf-line:hsl(220 13% 91%);--wf-edge:hsl(220 13% 91%);--wf-edge-w:1px;--wf-ctl:hsl(215 14% 80%);
+  --wf-p:hsl(224 64% 33%);--wf-p-ink:#fff;--wf-p-soft:hsl(220 60% 97%);--wf-link:hsl(224 64% 33%);
+  --wf-ok:hsl(152 76% 40%);--wf-warn:hsl(38 92% 50%);--wf-err:hsl(0 84% 60%);--wf-note:hsl(45 100% 50%);
+  --wf-r:3px;--wf-r2:6px;--wf-shadow:none;
+  --wf-shadow2:0 18px 40px -20px hsl(220 39% 11% / .35);--wf-scrim:hsl(220 39% 11% / .45);
+  --wf-device:hsl(220 39% 11%);--wf-device-w:11px;--wf-device-r:40px}
+[data-theme=dark]{--wf-scheme:dark;
+  --wf-canvas:hsl(222 47% 4%);--wf-bg:hsl(222 47% 7%);--wf-card:hsl(222 47% 10%);--wf-muted:hsl(215 28% 13%);
+  --wf-side:hsl(222 47% 9%);--wf-side-ink:hsl(210 20% 98% / .86);
+  --wf-nav-on-bg:hsl(217 91% 60% / .18);--wf-nav-on-ink:hsl(213 94% 68%);
+  --wf-ink:hsl(210 20% 98%);--wf-ink2:hsl(215 16% 65%);--wf-ink3:hsl(215 14% 45%);
+  --wf-line:hsl(215 28% 17%);--wf-edge:hsl(215 28% 20%);--wf-edge-w:1px;--wf-ctl:hsl(215 22% 30%);
+  --wf-p:hsl(217 91% 60%);--wf-p-ink:#fff;--wf-p-soft:hsl(217 60% 14%);--wf-link:hsl(213 94% 68%);
+  --wf-ok:hsl(142 65% 50%);--wf-warn:hsl(38 95% 55%);--wf-err:hsl(0 75% 55%);--wf-note:hsl(45 90% 55%);
+  --wf-r:8px;--wf-r2:12px;--wf-shadow:0 6px 18px hsl(0 0% 0% / .4);
+  --wf-shadow2:0 24px 60px -16px hsl(0 0% 0% / .7);--wf-scrim:hsl(222 50% 2% / .6);
+  --wf-device:hsl(215 22% 24%);--wf-device-w:11px;--wf-device-r:46px}
+
+/* ───────── 文档：横幅、文档头、目录、标题条、框外批注 ───────── */
+html{color-scheme:var(--wf-scheme);background:var(--wf-canvas)}
+body{margin:0;padding:0 32px 72px;color:var(--wf-ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+.wf-banner{position:sticky;top:0;z-index:20;margin:0 -32px 28px;padding:5px 16px;text-align:center;font-size:12px;letter-spacing:.3em;color:var(--wf-ink2);
+  background:color-mix(in srgb,var(--wf-note) 18%,var(--wf-canvas));border-bottom:1px dashed color-mix(in srgb,var(--wf-note) 60%,var(--wf-canvas))}
+.wf-doc{max-width:1000px}
+.wf-doc h1{margin:0 0 6px;font-size:22px;line-height:1.35}
+.wf-doc p{margin:4px 0;color:var(--wf-ink2)}
+.wf-toc{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 32px}
+.wf-toc a{display:inline-flex;align-items:center;gap:6px;padding:3px 12px 3px 4px;border:1px solid var(--wf-line);border-radius:calc(var(--wf-r) * 99);background:var(--wf-card);color:var(--wf-ink2);font-size:12px;text-decoration:none}
+.wf-toc a:hover{border-color:var(--wf-p);color:var(--wf-ink)}
+.wf-toc b{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:calc(var(--wf-r) * 99);background:var(--wf-muted);color:var(--wf-ink);font-size:11px}
+.wf-item{display:block;width:fit-content;max-width:100%;margin:0 0 56px;scroll-margin-top:44px}
+.wf-item:has(>[data-device=phone]){display:inline-flex;flex-direction:column;vertical-align:top;margin-right:32px}
+.wf-title,.wf-item>.wf-note{box-sizing:border-box;width:0;min-width:100%;margin-bottom:12px}
+/* 并排的手机框顶对齐：有手机页带说明时，标题条都留够两行说明的高度；批注放到框下面 */
+body:has(.wf-page[data-device=phone][data-desc]) .wf-item:has(>[data-device=phone])>.wf-title{min-height:70px;align-content:flex-start}
+.wf-item:has(>[data-device=phone])>.wf-note{order:1;margin:12px 0 0}
+.wf-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;font-size:13px;color:var(--wf-ink2)}
+.wf-title b{align-self:center;display:grid;place-items:center;min-width:26px;height:26px;padding:0 7px;border-radius:calc(var(--wf-r) * 99);background:var(--wf-ink);color:var(--wf-canvas);font-size:13px}
+.wf-title strong{font-size:16px;color:var(--wf-ink)}
+.wf-item:has(>[data-device=phone])>.wf-title>span{order:1;flex-basis:100%}
+.wf-title em{margin-left:auto;padding:0 8px;border:1px solid var(--wf-line);border-radius:calc(var(--wf-r) * .6);font-size:12px;font-style:normal;color:var(--wf-ink3)}
+/* 批注：框外（data-note）和框内（.note）同一种便签样式，字体用楷体，和界面区分开 */
+.wf-note,.wf-page .note{padding:8px 12px;border:1px dashed color-mix(in srgb,var(--wf-note) 70%,var(--wf-ink));border-left-width:4px;
+  background:color-mix(in srgb,var(--wf-note) 15%,var(--wf-card));color:var(--wf-ink);font:13px/1.65 "Kaiti SC",STKaiti,KaiTi,"Songti SC",serif}
+.wf-note::before,.wf-page .note::before{content:"批注";margin-right:8px;font:600 11px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;letter-spacing:.1em;color:color-mix(in srgb,var(--wf-note) 55%,var(--wf-ink))}
+
+/* ───────── 页面框和设备外框 ───────── */
+.wf-page{--h:900px;--ctl-h:32px;position:relative;box-sizing:content-box;width:1440px;min-height:var(--h);overflow:hidden;scroll-margin-top:82px;
+  display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto auto;
+  grid-template-areas:"status status" "top top" "side head" "side main" "side foot" "tab tab";
+  background:var(--wf-bg);color:var(--wf-ink);border:var(--wf-edge-w) solid var(--wf-edge);border-radius:var(--wf-r2);box-shadow:var(--wf-shadow2);
+  font:13px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+.wf-page *,.wf-page *::before,.wf-page *::after{box-sizing:border-box;margin:0}
+.wf-page[data-device=pad]{--h:1024px;width:768px}
+.wf-page[data-device=phone]{--h:812px;--ctl-h:38px;width:375px;font-size:14px}
+.wf-page:is([data-device=pad],[data-device=phone]){padding-bottom:28px;background:var(--wf-card);border:var(--wf-device-w) solid var(--wf-device);border-radius:var(--wf-device-r)}
+.wf-page[data-device=pad]{border-radius:calc(var(--wf-device-r) * .6)}
+.wf-page:is([data-device=pad],[data-device=phone])>main{background:var(--wf-bg)}
+/* 状态栏：时间 + 信号 + 电量，全用渐变画 */
+.wf-page:is([data-device=pad],[data-device=phone])::before{--sb:44px;content:"9:41";grid-area:status;display:flex;align-items:center;height:var(--sb);padding-left:30px;
+  font:600 15px/1 -apple-system,BlinkMacSystemFont,sans-serif;color:var(--wf-ink);
+  background:linear-gradient(var(--wf-ink) 0 0) right 37px center/14px 7px no-repeat,
+    linear-gradient(var(--wf-card) 0 0) right 31px center/21px 9px no-repeat,
+    linear-gradient(var(--wf-ink) 0 0) right 30px center/23px 11px no-repeat,
+    linear-gradient(var(--wf-ink) 0 0) right 27px center/2px 4px no-repeat,
+    linear-gradient(var(--wf-ink) 0 0) right 60px bottom calc(var(--sb) / 2 - 5px)/3px 10px no-repeat,
+    linear-gradient(var(--wf-ink) 0 0) right 65px bottom calc(var(--sb) / 2 - 5px)/3px 8px no-repeat,
+    linear-gradient(var(--wf-ink) 0 0) right 70px bottom calc(var(--sb) / 2 - 5px)/3px 6px no-repeat,
+    linear-gradient(var(--wf-ink) 0 0) right 75px bottom calc(var(--sb) / 2 - 5px)/3px 4px no-repeat}
+.wf-page[data-device=pad]::before{--sb:30px;padding-left:22px;font-size:12px}
+/* 底部横条。mono 下一律直角，只有表示「点」的头像、状态点、步骤 / 时间线圆点、单选保持圆形 */
+.wf-page:is([data-device=pad],[data-device=phone])::after{content:"";position:absolute;z-index:6;left:50%;bottom:9px;width:134px;height:5px;margin-left:-67px;border-radius:calc(var(--wf-r) * 99);background:var(--wf-ink)}
+.wf-page[data-device=pad]::after{width:200px;margin-left:-100px}
+
+/* ───────── 壳：侧栏、顶部导航、底部导航 ───────── */
+.wf-page>aside{grid-area:side;width:208px;padding:0 10px 20px;background:var(--wf-side);color:var(--wf-side-ink);border-right:var(--wf-edge-w) solid var(--wf-side-edge,var(--wf-edge))}
+.wf-page>:is(aside,.topnav)>b{display:flex;align-items:center;gap:9px;height:52px;padding:0 8px;font-size:15px;font-weight:700;white-space:nowrap}
+.wf-page>:is(aside,.topnav)>b::before{content:"";flex:none;width:20px;height:20px;border-radius:calc(var(--wf-r) * .7);background:var(--wf-mark,var(--wf-p))}
+.wf-page>aside>h6{padding:14px 8px 4px;font-size:11px;font-weight:400;letter-spacing:.08em;opacity:.55}
+.wf-page>aside>a{display:flex;align-items:center;gap:9px;height:36px;padding:0 8px;border-radius:var(--wf-r);color:inherit;text-decoration:none;cursor:default}
+.wf-page>aside>a>i{font-size:16px;opacity:.7}
+.wf-page>aside>a.on{background:var(--wf-nav-on-bg);color:var(--wf-nav-on-ink);font-weight:600}
+.wf-page>aside>a.on>i{opacity:1}
+.wf-page>.topnav{grid-area:top;display:flex;align-items:center;gap:28px;height:56px;padding:0 24px;background:var(--wf-card);border-bottom:var(--wf-edge-w) solid var(--wf-edge)}
+.wf-page>.topnav>b{padding:0;margin-right:8px}
+.wf-page>.topnav>a{align-self:stretch;display:flex;align-items:center;gap:6px;color:var(--wf-ink2);text-decoration:none;cursor:default}
+.wf-page>.topnav>a.on{color:var(--wf-p);font-weight:600;box-shadow:inset 0 -2px var(--wf-p)}
+.wf-page>.tabbar{grid-area:tab;display:flex;height:56px;background:var(--wf-card);border-top:var(--wf-edge-w) solid var(--wf-edge)}
+.wf-page>.tabbar>a{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--wf-ink3);text-decoration:none;cursor:default}
+.wf-page>.tabbar>a>i{font-size:22px;line-height:1}
+.wf-page>.tabbar>a.on{color:var(--wf-p);font-weight:600}
+/* 菜单、页签里的角标 */
+.wf-page :is(aside,nav) a>small{min-width:18px;height:18px;padding:0 5px;border-radius:calc(var(--wf-r) * 99);background:color-mix(in srgb,var(--wf-err) 14%,var(--wf-card));color:var(--wf-err);font-size:11px;font-weight:400;line-height:18px;text-align:center}
+.wf-page>aside>a>small{margin-left:auto}
+.wf-page>.tabbar>a>small{position:absolute;top:4px;left:calc(50% + 6px)}
+
+/* ───────── 页面区：顶栏、内容、底部操作条 ───────── */
+.wf-page>header{grid-area:head;display:flex;align-items:center;gap:12px;min-height:52px;padding:0 20px;background:var(--wf-card);border-bottom:var(--wf-edge-w) solid var(--wf-edge)}
+.wf-page>header h1{font-size:15px;font-weight:600}
+.wf-page>header>i,.wf-page>header>a>i{font-size:18px;color:var(--wf-ink2)}
+.wf-page>header>a:has(>i){text-decoration:none}
+.wf-page[data-device=phone]>header{position:relative;min-height:44px;padding:0 12px;gap:14px}
+.wf-page[data-device=phone]>header>h1{position:absolute;left:50%;max-width:60%;transform:translateX(-50%);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wf-page[data-device=phone]>header>h1+*{margin-left:auto}
+.wf-page[data-device=phone]>header>i,.wf-page[data-device=phone]>header>a>i{font-size:22px;color:var(--wf-ink)}
+.wf-page>main{grid-area:main;position:relative;min-width:0;display:flex;flex-direction:column;gap:12px;padding:16px 20px 20px}
+.wf-page[data-device=phone]>main{padding:12px}
+.wf-page>footer{grid-area:foot;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 20px;background:var(--wf-card);border-top:var(--wf-edge-w) solid var(--wf-edge)}
+.wf-page[data-device=phone]>footer{padding:8px 12px}
+.wf-page[data-device=phone]>footer>button{flex:1;height:40px}
+
+/* ───────── 文字 ───────── */
+.wf-page a{color:var(--wf-link);text-decoration:var(--wf-link-deco,none);cursor:pointer}
+.wf-page small{font-size:12px;color:var(--wf-ink2)}
+.wf-page h1{font-size:20px}
+.wf-page h2{font-size:16px;font-weight:600}
+.wf-page h3{font-size:14px;font-weight:600}
+.wf-page h4{font-size:13px;font-weight:600}
+.wf-page :is(ul,ol):not([class]){padding-left:1.4em}
+.wf-page code{font:12px/1.4 "SF Mono",Menlo,Consolas,monospace}
+.wf-page time{white-space:nowrap;font-variant-numeric:tabular-nums}
+.wf-page hr{border:0;border-top:1px solid var(--wf-line)}
+.wf-page .grow{flex:1}
+
+/* ───────── 容器 ───────── */
+/* 卡片、弹窗、抽屉、底部弹层共用：首个 h3 是头，footer 是底，表格 / 列表 / 分页贴边 */
+.wf-page :is(.card,.modal,.drawer,.sheet){display:flex;flex-direction:column;gap:12px;min-width:0;padding:16px;overflow:hidden;background:var(--wf-card);border-radius:var(--wf-r2)}
+.wf-page .card{border:var(--wf-edge-w) solid var(--wf-edge);box-shadow:var(--wf-shadow)}
+.wf-page :is(.card,.modal,.drawer,.sheet)>h3:first-child{display:flex;align-items:center;gap:8px;margin:-16px -16px 0;padding:12px 16px;border-bottom:1px solid var(--wf-line)}
+.wf-page :is(.card,.modal,.drawer,.sheet)>h3>:is(small,.ri-close-line){margin-left:auto}
+.wf-page :is(.card,.modal,.drawer,.sheet)>h3>small~.ri-close-line{margin-left:0}
+.wf-page :is(.card,.modal,.drawer,.sheet)>h3>small{font-weight:400}
+.wf-page :is(.card,.modal,.drawer,.sheet)>h3>i{font-size:16px;font-weight:400;color:var(--wf-ink2)}
+.wf-page :is(.card,.modal,.drawer,.sheet)>:is(table,.list,.pager){width:calc(100% + 32px);margin:0 -16px}
+.wf-page :is(.card,.modal,.drawer,.sheet)>:is(h3+table,h3+.list,table+.pager){margin-top:-12px}
+.wf-page :is(.card,.modal,.drawer,.sheet)>:is(table,.list):first-child{margin-top:-16px}
+.wf-page :is(.card,.modal,.drawer,.sheet)>:is(table,.list,.pager):last-child{margin-bottom:-16px}
+.wf-page :is(.card,.modal,.drawer,.sheet)>footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:auto -16px -16px;padding:12px 16px;border-top:1px solid var(--wf-line)}
+.wf-page .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.wf-page .stats>div{padding:12px 16px;background:var(--wf-card);border:var(--wf-edge-w) solid var(--wf-edge);border-radius:var(--wf-r2);box-shadow:var(--wf-shadow);font-size:12px;color:var(--wf-ink2)}
+.wf-page .stats b{display:block;font-size:22px;line-height:1.35;font-weight:700;color:var(--wf-ink);font-variant-numeric:tabular-nums}
+.wf-page .stats small{display:block;margin-top:2px}
+.wf-page .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.wf-page .row{display:flex;gap:12px}
+.wf-page .row>*{flex:1;min-width:0}
+.wf-page .row>div:not([class]){display:flex;flex-direction:column;gap:12px}
+.wf-page .tabs{display:flex;gap:24px;border-bottom:1px solid var(--wf-line)}
+.wf-page .tabs>a{display:flex;align-items:center;gap:6px;margin-bottom:-1px;padding:8px 2px;border-bottom:2px solid transparent;color:var(--wf-ink2);text-decoration:none;white-space:nowrap}
+.wf-page .tabs>a.on{border-bottom-color:var(--wf-p);color:var(--wf-p);font-weight:600}
+.wf-page[data-device=phone] .tabs{gap:0}
+.wf-page[data-device=phone] .tabs>a{flex:1;justify-content:center}
+.wf-page .steps{display:flex;padding:0;list-style:none;counter-reset:wf-step}
+.wf-page .steps>li{flex:1;min-width:0;display:flex;align-items:center;gap:8px;counter-increment:wf-step;color:var(--wf-ink3)}
+.wf-page .steps>li:last-child{flex:none}
+.wf-page .steps>li::before{content:counter(wf-step);flex:none;display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--wf-ctl);border-radius:50%;background:var(--wf-card);color:var(--wf-ink3);font-size:12px}
+.wf-page .steps>li:not(:last-child)::after{content:"";flex:1;min-width:12px;height:1px;background:var(--wf-line)}
+.wf-page .steps>li.done{color:var(--wf-ink)}
+.wf-page .steps>li.done::before{content:"✓";border-color:var(--wf-p);color:var(--wf-p)}
+.wf-page .steps>li.done::after{background:var(--wf-p)}
+.wf-page .steps>li.on{color:var(--wf-ink);font-weight:600}
+.wf-page .steps>li.on::before{border-color:var(--wf-p);background:var(--wf-p);color:var(--wf-p-ink)}
+.wf-page .kv{display:grid;grid-template-columns:repeat(var(--cols,1),minmax(5em,max-content) minmax(0,1fr));gap:8px 16px;align-items:baseline}
+.wf-page .kv>dt{color:var(--wf-ink2)}
+.wf-page .kv>dd{min-width:0;overflow-wrap:anywhere}
+.wf-page .timeline{padding:0;list-style:none}
+.wf-page .timeline>li{position:relative;margin-left:5px;padding:0 0 14px 20px;border-left:2px solid var(--wf-line)}
+.wf-page .timeline>li:last-child{padding-bottom:0;border-left-color:transparent}
+.wf-page .timeline>li::before{content:"";position:absolute;left:-7px;top:4px;width:12px;height:12px;border:2px solid var(--wf-ctl);border-radius:50%;background:var(--wf-card)}
+.wf-page .timeline>li.on::before{border-color:var(--wf-p);background:var(--wf-p)}
+.wf-page .timeline>li.done::before{border-color:var(--wf-p);background:color-mix(in srgb,var(--wf-p) 30%,var(--wf-card))}
+.wf-page .timeline>li.done:not(:last-child){border-left-color:var(--wf-p)}
+.wf-page .timeline time{margin-left:8px;font-size:12px;color:var(--wf-ink3)}
+.wf-page .timeline small{display:block}
+.wf-page .tree,.wf-page .tree ul{padding:0;list-style:none}
+.wf-page .tree ul{margin-left:14px;padding-left:8px;border-left:1px solid var(--wf-line)}
+.wf-page .tree a{display:flex;align-items:center;gap:6px;height:30px;padding:0 8px;border-radius:var(--wf-r);color:inherit;text-decoration:none}
+.wf-page .tree a.on{background:var(--wf-p-soft);color:var(--wf-p);font-weight:600}
+.wf-page .tree a>small{margin-left:auto}
+.wf-page .list{display:flex;flex-direction:column;background:var(--wf-card);border-radius:var(--wf-r2)}
+.wf-page .list>*{display:flex;align-items:center;gap:12px;min-height:52px;padding:10px 16px;color:inherit;text-decoration:none}
+.wf-page .list>*+*{border-top:1px solid var(--wf-line)}
+.wf-page .list>*>i{flex:none;width:24px;text-align:center;font-size:20px;line-height:1;color:var(--wf-p)}
+.wf-page .list>*>p{flex:1;min-width:0}
+.wf-page .list>*>p>small{display:block}
+.wf-page .list>a::after{content:"";flex:none;width:7px;height:7px;margin:0 2px 0 4px;border:solid var(--wf-ink3);border-width:1.5px 1.5px 0 0;transform:rotate(45deg)}
+.wf-page .form{--label:6em;display:flex;flex-direction:column;gap:14px}
+.wf-page[data-device=phone] .form{--label:5em}
+.wf-page .form>*{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+/* 标签列挂在左内边距里，折行的控件、胶囊、提示都从控件列起头 */
+.wf-page .form>:has(>span:first-child),.wf-page .form>footer{padding-left:calc(var(--label) + 12px)}
+.wf-page .form>*>span:first-child{flex:0 0 var(--label);margin-left:calc(-12px - var(--label));align-self:flex-start;line-height:var(--ctl-h);text-align:right;color:var(--wf-ink2)}
+.wf-page[data-device=phone] .form>*>span:first-child{text-align:left}
+.wf-page .form>:has(:required)>span:first-child::before{content:"*";margin-right:3px;color:var(--wf-err)}
+.wf-page .form>*>:is(input,select,textarea):not([type=checkbox],[type=radio]){flex:1;max-width:440px}
+.wf-page .form>*>small{flex-basis:100%}
+.wf-page .tip{--c:var(--wf-p);display:flex;align-items:flex-start;gap:8px;padding:10px 14px;border:1px solid color-mix(in srgb,var(--c) 28%,var(--wf-card));border-radius:var(--wf-r);background:color-mix(in srgb,var(--c) 8%,var(--wf-card));color:var(--wf-ink2)}
+.wf-page .tip>i{flex:none;margin-top:2px;font-size:16px;color:var(--c)}
+.wf-page .empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:36px 16px;text-align:center;color:var(--wf-ink3)}
+.wf-page .empty>i{font-size:44px;line-height:1;color:color-mix(in srgb,var(--wf-ink3) 60%,var(--wf-card))}
+/* 竖排容器里直接放的按钮、标签、胶囊：宽度按内容不拉满，位置跟容器的 align-items 走（居中写法照样居中）；标签去掉行内排列用的左右外边距 */
+.wf-page :where(main,.card,.modal,.drawer,.sheet,.row>div:not([class]))>:where(button,.tag,.chip){width:fit-content}
+.wf-page :is(main,.card,.modal,.drawer,.sheet,.row>div:not([class]))>.tag{margin-inline:0}
+
+/* ───────── 浮层：静态快照，作为 section 的直接子元素，框内其余部分压暗 ───────── */
+.wf-page>:is(.modal,.drawer,.sheet){position:absolute;z-index:5;box-shadow:0 0 0 3000px var(--wf-scrim)}
+.wf-page>.modal{left:50%;top:min(50%,calc(var(--h) / 2));width:min(480px,calc(100% - 48px));max-height:calc(100% - 48px);transform:translate(-50%,-50%)}
+.wf-page>.drawer{top:0;right:0;bottom:0;width:min(480px,88%);border-radius:0}
+.wf-page>.sheet{left:0;right:0;bottom:0;max-height:85%;padding-bottom:36px;border-radius:var(--wf-r2) var(--wf-r2) 0 0}
+.wf-page>.sheet::before{content:"";position:absolute;top:6px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:calc(var(--wf-r) * 99);background:var(--wf-ctl)}
+
+/* ───────── 表格 ───────── */
+.wf-page table{width:100%;border-collapse:collapse}
+.wf-page :is(th,td){padding:9px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--wf-line)}
+.wf-page th{background:var(--wf-muted);color:var(--wf-ink2);font-size:12px;font-weight:600;white-space:nowrap}
+.wf-page td{min-width:calc(4em + 20px);text-wrap:balance}
+.wf-page :is(th,td).num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.wf-page :is(th,td):has(>input[type=checkbox]:only-child){width:36px;min-width:0}
+.wf-page td:has(>button){white-space:nowrap}
+.wf-page tr:last-child>td{border-bottom:0}
+.wf-page tr:hover>td{background:color-mix(in srgb,var(--wf-p) 4%,transparent)}
+.wf-page tr.on>td{background:color-mix(in srgb,var(--wf-p) 8%,var(--wf-card))}
+.wf-page tr.on>td:first-child{box-shadow:inset 3px 0 var(--wf-p)}
+
+/* ───────── 控件 ───────── */
+.wf-page :is(input,select,textarea,button){font:inherit;color:var(--wf-ink);outline:0}
+.wf-page :where(input:not([type=checkbox],[type=radio]),select,textarea){height:var(--ctl-h);min-width:0;padding:0 10px;border:1px solid var(--wf-ctl);border-radius:var(--wf-r);background-color:var(--wf-card)}
+.wf-page textarea{height:auto;min-height:80px;padding:7px 10px;line-height:1.55;resize:vertical}
+.wf-page textarea:not(:empty,[rows]){field-sizing:content}
+.wf-page :is(input,textarea)::placeholder{color:var(--wf-ink3)}
+.wf-page :is(input,select,textarea):focus{border-color:var(--wf-p);box-shadow:0 0 0 3px color-mix(in srgb,var(--wf-p) 18%,transparent)}
+.wf-page select{-webkit-appearance:none;appearance:none;padding-right:28px;cursor:pointer;
+  background:linear-gradient(45deg,transparent 50%,var(--wf-ink3) 50%) calc(100% - 15px) calc(50% + 1px)/5px 5px no-repeat,
+    linear-gradient(135deg,var(--wf-ink3) 50%,transparent 50%) calc(100% - 10px) calc(50% + 1px)/5px 5px no-repeat,var(--wf-card)}
+/* 搜索框的放大镜：镜片是环形渐变，手柄是斜线渐变 */
+.wf-page input[type=search]{-webkit-appearance:none;appearance:none;flex:1 1 200px;max-width:320px;padding-left:32px;
+  background:radial-gradient(circle closest-side,transparent 3.6px,var(--wf-ink3) 4.1px 5.2px,transparent 5.7px) 9px calc(50% - 2px)/13px 13px no-repeat,
+    linear-gradient(45deg,transparent 38%,var(--wf-ink3) 38% 62%,transparent 62%) 19px calc(50% + 4px)/5px 5px no-repeat,var(--wf-card)}
+.wf-page input:is([type=checkbox],[type=radio]){width:15px;height:15px;margin:0;accent-color:var(--wf-p);vertical-align:-2px;cursor:pointer}
+.wf-page label:where(:has(>input:is([type=checkbox],[type=radio]))){display:inline-flex;align-items:center;gap:6px;min-height:var(--ctl-h);cursor:pointer}
+.wf-page input.switch{-webkit-appearance:none;appearance:none;flex:none;width:36px;height:20px;border-radius:calc(var(--wf-r) * 99);
+  background:radial-gradient(circle closest-side,var(--wf-p-ink) 86%,transparent 94%) 2px 50%/16px 16px no-repeat,color-mix(in srgb,var(--wf-ink3) 55%,var(--wf-card))}
+.wf-page input.switch:checked{background-color:var(--wf-p);background-position:calc(100% - 2px) 50%}
+.wf-page progress{-webkit-appearance:none;appearance:none;width:120px;height:6px;border:0;border-radius:calc(var(--wf-r) * 99);overflow:hidden;vertical-align:middle;accent-color:var(--wf-p);background:color-mix(in srgb,var(--wf-ink3) 25%,var(--wf-card))}
+.wf-page progress::-webkit-progress-bar{background:color-mix(in srgb,var(--wf-ink3) 25%,var(--wf-card))}
+.wf-page progress::-webkit-progress-value{background:var(--wf-p)}
+.wf-page progress::-moz-progress-bar{background:var(--wf-p)}
+.wf-page button{--b:var(--wf-p);display:inline-flex;align-items:center;justify-content:center;gap:5px;height:var(--ctl-h);padding:0 14px;border:1px solid var(--b);border-radius:var(--wf-r);background:var(--b);color:var(--wf-p-ink);white-space:nowrap;cursor:pointer}
+.wf-page button>i{font-size:14px}
+.wf-page button.ghost{border-color:var(--wf-ctl);background:var(--wf-card);color:var(--wf-ink)}
+.wf-page button.text{height:auto;padding:0 2px;border-color:transparent;background:transparent;color:var(--wf-link);text-decoration:var(--wf-link-deco,none)}
+.wf-page button.danger{--b:var(--wf-err)}
+.wf-page button:is(.ghost,.text).danger{color:var(--wf-err)}
+.wf-page button.ghost.danger{border-color:color-mix(in srgb,var(--wf-err) 45%,var(--wf-card))}
+.wf-page button.block{display:flex;width:100%;height:40px}
+.wf-page td button{height:26px;padding:0 9px;font-size:12px}
+.wf-page td button+button{margin-left:6px}
+.wf-page button.fab{position:absolute;z-index:2;right:16px;bottom:16px;width:52px;height:52px;padding:0;border-radius:calc(var(--wf-r) * 99);box-shadow:var(--wf-shadow2)}
+.wf-page button.fab>i{font-size:24px}
+
+/* ───────── 小件 ───────── */
+.wf-page .tag{--c:var(--wf-ink2);display:inline-block;margin:2px 4px 2px 0;padding:0 7px;border:1px solid color-mix(in srgb,var(--c) 26%,var(--wf-card));border-radius:calc(var(--wf-r) * .6);
+  background:color-mix(in srgb,var(--c) 9%,var(--wf-card));color:color-mix(in srgb,var(--c) 82%,var(--wf-ink));font-size:11px;font-weight:400;line-height:18px;white-space:nowrap}
+.wf-page b.tag{margin:0;padding:0 8px;font-size:12px;line-height:22px;font-weight:700}
+.wf-page b.tag:not(:last-child){margin-right:4px}
+.wf-page .tag>i{margin-right:3px}
+.wf-page .chip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 12px;border:1px solid var(--wf-ctl);border-radius:calc(var(--wf-r) * 99);background:var(--wf-card);color:var(--wf-ink);font-size:12px;text-decoration:none;white-space:nowrap;cursor:pointer}
+.wf-page .chip.on{border-color:var(--wf-p);background:color-mix(in srgb,var(--wf-p) 12%,var(--wf-card));color:var(--wf-p);font-weight:600}
+.wf-page :is(p,dd,td)>.chip{margin:2px 6px 2px 0}
+.wf-page .dot{--c:var(--wf-ink3);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.wf-page .dot::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--c)}
+.wf-page .avatar{display:inline-grid;place-items:center;flex:none;width:var(--s,32px);height:var(--s,32px);border-radius:50%;background:var(--wf-p-soft);color:var(--wf-p);font-size:calc(var(--s,32px) * .4);font-weight:600;vertical-align:middle}
+.wf-page .img{display:grid;place-items:center;min-height:64px;padding:8px;border:1px dashed color-mix(in srgb,var(--wf-p) 30%,var(--wf-card));border-radius:var(--wf-r);text-align:center;font-size:12px;
+  color:color-mix(in srgb,var(--wf-p) 55%,var(--wf-ink2));background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--wf-p) 5%,var(--wf-card)) 0 10px,color-mix(in srgb,var(--wf-p) 9%,var(--wf-card)) 10px 20px)}
+/* 图表占位：柱（默认）/ line 折线 / pie 饼。只画示意形状，文字写图表内容 */
+.wf-page .chart{position:relative;height:200px;padding:10px 14px;font-size:12px;color:var(--wf-ink2);
+  background:repeating-linear-gradient(to top,var(--wf-line) 0 1px,transparent 1px 25%) 14px 36px/calc(100% - 28px) calc(100% - 48px) no-repeat}
+.wf-page .chart::before,.wf-page .chart.line::after{content:"";position:absolute;inset:36px 14px 12px}
+.wf-page .chart::before{background:
+  linear-gradient(var(--wf-p) 0 0) 0 100%/8% 45% no-repeat,linear-gradient(var(--wf-p) 0 0) calc(100% / 6) 100%/8% 70% no-repeat,
+  linear-gradient(var(--wf-p) 0 0) calc(200% / 6) 100%/8% 55% no-repeat,linear-gradient(var(--wf-p) 0 0) 50% 100%/8% 85% no-repeat,
+  linear-gradient(var(--wf-p) 0 0) calc(400% / 6) 100%/8% 62% no-repeat,linear-gradient(var(--wf-p) 0 0) calc(500% / 6) 100%/8% 78% no-repeat,
+  linear-gradient(var(--wf-p) 0 0) 100% 100%/8% 50% no-repeat}
+.wf-page .chart.line::before{background:linear-gradient(color-mix(in srgb,var(--wf-p) 22%,transparent),transparent);
+  clip-path:polygon(0 70%,14% 52%,28% 60%,43% 34%,57% 44%,71% 22%,86% 30%,100% 12%,100% 100%,0 100%)}
+.wf-page .chart.line::after{background:var(--wf-p);
+  clip-path:polygon(0 70%,14% 52%,28% 60%,43% 34%,57% 44%,71% 22%,86% 30%,100% 12%,100% calc(12% + 2.5px),86% calc(30% + 2.5px),71% calc(22% + 2.5px),57% calc(44% + 2.5px),43% calc(34% + 2.5px),28% calc(60% + 2.5px),14% calc(52% + 2.5px),0 calc(70% + 2.5px))}
+.wf-page .chart.pie{background:none}
+.wf-page .chart.pie::before{left:50%;right:auto;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;
+  background:conic-gradient(var(--wf-p) 0 40%,color-mix(in srgb,var(--wf-p) 65%,var(--wf-card)) 0 65%,color-mix(in srgb,var(--wf-p) 40%,var(--wf-card)) 0 85%,color-mix(in srgb,var(--wf-p) 18%,var(--wf-card)) 0);
+  -webkit-mask:radial-gradient(closest-side,transparent 56%,currentColor 57%);mask:radial-gradient(closest-side,transparent 56%,currentColor 57%)}
+.wf-page .pager{display:flex;justify-content:flex-end;align-items:center;gap:6px;padding:10px 14px;border-top:1px solid var(--wf-line)}
+.wf-page .pager>a{display:grid;place-items:center;min-width:28px;height:28px;padding:0 6px;border:1px solid var(--wf-ctl);border-radius:var(--wf-r);color:var(--wf-ink2);text-decoration:none}
+.wf-page .pager>a.on{border-color:var(--wf-p);background:var(--wf-p);color:var(--wf-p-ink)}
+.wf-page .pager>small{margin-left:6px}
+
+/* ───────── 状态修饰：放最后，覆盖各组件的默认 --c ───────── */
+.wf-page .ok{--c:var(--wf-ok)}
+.wf-page .warn{--c:var(--wf-warn)}
+.wf-page .err{--c:var(--wf-err)}
+.wf-page .info{--c:var(--wf-p)}
+.wf-page :is(.tag,.tip).warn{border-style:var(--wf-dash,solid)}
+</style>
+</head>
+<body>
+<div class="wf-banner">示意稿，非最终界面</div>
+<!-- WF:PAGES-START -->
+<header class="wf-doc"><h1>制度知识库 线框图</h1><p>员工用自然语言问制度，回答附出处；管理员维护文档库、查看解析结果、跑评测集。示意稿只定结构和必须有的信息，样式可以自己发挥。</p></header>
+<template id="wf-shell">
+  <aside><b>制度知识库</b><h6>使用</h6><a><i class="ri-question-answer-line"></i>问答</a><h6>管理</h6><a><i class="ri-folder-3-line"></i>文档库<small>10</small></a><a><i class="ri-checkbox-multiple-line"></i>评测集</a><a><i class="ri-settings-3-line"></i>设置</a></aside>
+</template>
+
+<section class="wf-page" data-nav="问答" data-title="问答" data-desc="员工提问，回答带出处；可以追问" data-note="每条回答都要能点开出处，答不出来就明说">
+  <header><h1>问答</h1><span class="grow"></span><button class="ghost"><i class="ri-add-line"></i>新对话</button><span class="avatar">林</span></header>
+  <main>
+    <div class="row">
+      <div class="card" style="flex:0 0 240px"><h3>最近对话</h3>
+        <div class="list">
+          <a class="on"><p>设计变更分几类<small>今天 10:12</small></p></a>
+          <a><p>正高级出差住宿标准<small>今天 09:40</small></p></a>
+          <a><p>试用期多长<small>昨天</small></p></a>
+        </div>
+      </div>
+      <div class="card" style="flex:1">
+        <h3>设计变更分几类<small>回答用时 3.2 秒</small></h3>
+        <div class="list">
+          <div><span class="avatar">林</span><p>设计变更分为哪几类？各自谁批准？</p></div>
+          <div><i class="ri-robot-2-line"></i><p>分为三类：<b>小型设计变更、一般设计变更、重大设计变更</b>。施工单位提出变更后，先核实、判断变更类型，再按类型走校核 → 审核 → 批准；重大设计变更需收集经业主批复的变更。<small>出处：[1] 工程设计（咨询）过程控制程序 · 附录 C 流程图　[2] 同上 · 附录 D 节点说明表</small></p></div>
+        </div>
+        <div class="bar"><span class="chip on"><i class="ri-flow-chart"></i>[1] 附录 C 流程图</span><span class="chip"><i class="ri-table-line"></i>[2] 附录 D 节点说明</span><span class="grow"></span><button class="text"><i class="ri-thumb-up-line"></i></button><button class="text"><i class="ri-thumb-down-line"></i></button></div>
+        <p class="tip"><i class="ri-information-line"></i>出处标签上的图标说明内容来自流程图、表格还是正文</p>
+        <div class="bar"><textarea placeholder="继续追问，例如：那一般设计变更由谁批准？" style="flex:1;height:64px"></textarea><button><i class="ri-send-plane-line"></i>发送</button></div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<section class="wf-page" data-nav="问答" data-title="查看出处" data-desc="点出处标签，右侧打开原文定位" data-note="流程图出处要显示图（或图里取出的文字），表格出处要显示整行和表头，不能只给一段碎文字">
+  <header><h1>问答</h1><span class="grow"></span><span class="avatar">林</span></header>
+  <main>
+    <div class="card"><h3>设计变更分几类</h3><p>分为三类：小型设计变更、一般设计变更、重大设计变更……</p></div>
+  </main>
+  <div class="drawer">
+    <h3>[1] 附录 C 流程图<i class="ri-close-line"></i></h3>
+    <dl class="kv"><dt>文件</dt><dd>工程设计（咨询）过程控制程序.doc</dd><dt>位置</dt><dd>附录 C　工程设计（咨询）过程设计和开发更改流程图</dd><dt>内容类型</dt><dd><span class="tag info">Visio 流程图</span></dd><dt>版本</dt><dd>现行</dd></dl>
+    <div class="img" style="height:200px">流程图渲染图（或缩略图）</div>
+    <h4>从流程图取出的文字</h4>
+    <p><small>开始 → 施工单位提出设计变更 → 核实 → 判断变更类型 → 小型 / 一般 / 重大设计变更 → 校核 → 审核 → 批准 → 收集经业主批复的变更 → 结束</small></p>
+    <footer><button class="ghost">下载原文件</button><button>在文档库中打开</button></footer>
+  </div>
+</section>
+
+<section class="wf-page" data-nav="问答" data-title="找不到答案" data-desc="文档里没有的问题，明确说找不到" data-note="不能编造；可以列出最接近的几条供参考，但要说明不是答案">
+  <header><h1>问答</h1><span class="grow"></span><span class="avatar">林</span></header>
+  <main>
+    <div class="card"><h3>年终奖怎么发</h3>
+      <div class="list">
+        <div><span class="avatar">林</span><p>公司年终奖怎么发？</p></div>
+        <div><i class="ri-robot-2-line"></i><p>现有制度文件中没有找到关于年终奖发放的规定。<small>相关度较高但不能回答此问题的内容：《财务管理制度汇编（2024 版）》第四章下位制度目录</small></p></div>
+      </div>
+      <p class="tip warn"><i class="ri-error-warning-line"></i>未找到依据，已记录为“无答案问题”，管理员可在设置中查看</p>
+    </div>
+  </main>
+</section>
+
+<section class="wf-page" data-nav="问答" data-title="版本提示" data-desc="同一制度有新旧版本时，按现行版回答并提示" data-ref="进阶">
+  <header><h1>问答</h1><span class="grow"></span><span class="avatar">林</span></header>
+  <main>
+    <div class="card"><h3>正高级出差住宿标准</h3>
+      <div class="list">
+        <div><span class="avatar">林</span><p>正高级去一类城市出差，住宿标准多少？</p></div>
+        <div><i class="ri-robot-2-line"></i><p>按《差旅费管理办法（2025 修订版）》，正高级在一类城市住宿标准为 <b>600 元/人·天</b>。<small>出处：[1] 差旅费管理办法（2025 修订版）· 第十二条 住宿费标准表</small></p></div>
+      </div>
+      <p class="tip info"><i class="ri-history-line"></i>还有旧版《差旅费管理办法（2021 版）》，其中该标准为 520 元，已被 2025 修订版替代</p>
+      <table><tr><th>职级</th><th class="num">一类城市</th><th class="num">二类城市</th><th class="num">三类城市</th></tr><tr class="on"><td>正高级</td><td class="num">600</td><td class="num">500</td><td class="num">420</td></tr><tr><td>副高级</td><td class="num">500</td><td class="num">420</td><td class="num">360</td></tr></table>
+    </div>
+  </main>
+</section>
+
+<section class="wf-page" data-nav="文档库" data-title="文档库" data-desc="管理员导入文档，看解析状态" data-note="解析结果要统计出表格数、流程图数，失败要写原因。PDF 调用项目一的 OCR 接口识别，状态里能看到识别进度">
+  <header><h1>文档库</h1><span class="grow"></span><span class="avatar">管</span></header>
+  <main>
+    <div class="stats"><div><b>10</b>文档</div><div><b>412</b>切分块</div><div><b>13</b>表格</div><div><b>3</b>流程图</div><div><b>1</b>解析失败</div></div>
+    <div class="bar"><select><option>全部格式</option><option>.doc</option><option>.docx</option><option>PDF</option></select><select><option>全部状态</option></select><input type="search" placeholder="搜文件名"><span class="grow"></span><button class="ghost"><i class="ri-refresh-line"></i>重建索引</button><button><i class="ri-upload-2-line"></i>导入文档</button></div>
+    <div class="card"><table>
+      <tr><th>文件名</th><th style="width:6em">格式</th><th class="num">页数</th><th class="num">表格</th><th class="num">流程图</th><th style="width:7em">版本</th><th style="width:7em">状态</th><th style="width:9em">操作</th></tr>
+      <tr><td>工程设计（咨询）过程控制程序.doc</td><td>.doc</td><td class="num">14</td><td class="num">3</td><td class="num">3</td><td>现行</td><td><span class="tag ok">已完成</span></td><td><button class="text">查看解析</button></td></tr>
+      <tr><td>“三重一大”事项决策管理规定.doc</td><td>.doc</td><td class="num">9</td><td class="num">2</td><td class="num">0</td><td>现行</td><td><span class="tag ok">已完成</span></td><td><button class="text">查看解析</button></td></tr>
+      <tr><td>差旅费管理办法2021.pdf</td><td>PDF</td><td class="num">4</td><td class="num">1</td><td class="num">0</td><td><span class="tag">旧版</span></td><td><span class="tag ok">已完成</span></td><td><button class="text">查看解析</button></td></tr>
+      <tr><td>质量手册 QM-2025（扫描）.pdf</td><td>扫描 PDF</td><td class="num">8</td><td class="num">1</td><td class="num">0</td><td>现行</td><td><span class="tag info">OCR 中 5/8</span></td><td><button class="text">查看解析</button></td></tr>
+      <tr><td>印章管理规定2021（盖章扫描件）.pdf</td><td>扫描 PDF</td><td class="num">4</td><td class="num">—</td><td class="num">—</td><td><span class="tag">旧版</span></td><td><span class="tag err">失败</span></td><td><button class="text">重试</button><button class="text">原因</button></td></tr>
+    </table><div class="pager"><a class="on">1</a><a>2</a><small>共 10 份</small></div></div>
+  </main>
+</section>
+
+<section class="wf-page" data-nav="文档库" data-title="导入文档" data-desc="上传文件并设置版本关系">
+  <header><h1>文档库</h1><span class="grow"></span><span class="avatar">管</span></header>
+  <main><div class="card"><h3>文档列表</h3><p><small>（列表同上一页）</small></p></div></main>
+  <div class="modal">
+    <h3>导入文档<i class="ri-close-line"></i></h3>
+    <div class="empty"><i class="ri-upload-cloud-2-line"></i><p>拖入文件或点击选择，支持 .doc .docx .pdf，可多选</p></div>
+    <div class="list"><div><i class="ri-file-word-line"></i><p>关于印发《差旅费管理办法（2025 修订版）》的通知.docx<small>42 KB</small></p><span class="tag warn">与已有文档相似</span></div></div>
+    <div class="form">
+      <label><span>替代旧版本</span><select><option>差旅费管理办法2021.pdf</option><option>不替代</option></select><small>选中后旧版标为“旧版”，问答默认按新版回答</small></label>
+      <label><span>重复文件</span><select><option>内容相同则跳过</option></select></label>
+    </div>
+    <footer><button class="ghost">取消</button><button>开始导入</button></footer>
+  </div>
+</section>
+
+<section class="wf-page" data-nav="文档库" data-title="解析详情" data-desc="看一份文档被切成了哪些块，重点核对表格和流程图" data-note="这一页是给自己调试用的：表格块要保留表头，流程图块要有图里的文字">
+  <header><i class="ri-arrow-left-s-line"></i><h1>工程设计（咨询）过程控制程序.doc</h1><span class="grow"></span><button class="ghost">重新解析</button></header>
+  <main>
+    <div class="row">
+      <div class="card" style="flex:0 0 280px"><h3>目录结构<small>从文档目录还原</small></h3>
+        <ul class="tree">
+          <li><a><i class="ri-file-text-line"></i>1 范围<small>p1</small></a></li>
+          <li><a><i class="ri-file-text-line"></i>3 职责<small>p1</small></a></li>
+          <li><a><i class="ri-folder-line"></i>4 程序</a><ul><li><a>4.1 设计和开发的策划<small>p2</small></a></li><li><a>4.5 设计和开发的更改<small>p9</small></a></li></ul></li>
+          <li><a><i class="ri-folder-line"></i>5 附录</a><ul><li><a>附录 A 流程图</a></li><li><a>附录 B 节点说明</a></li><li><a class="on">附录 C 流程图</a></li></ul></li>
+        </ul>
+      </div>
+      <div style="flex:1">
+        <nav class="tabs"><a>全部 128</a><a>正文 116</a><a>表格 9</a><a class="on">流程图 3</a></nav>
+        <div class="card"><h3>块 #87　附录 C 流程图<small><span class="tag info">Visio</span></small></h3>
+          <div class="row"><div class="img" style="height:180px">流程图预览</div><div><h4>提取的文字</h4><p><small>施工单位提出设计变更 → 核实 → 判断变更类型 → 小型设计变更 / 一般设计变更 / 重大设计变更 → 校核 → 审核 → 批准 ……</small></p><h4>提取方式</h4><p><small>Visio 对象文字 / 渲染后用视觉模型读（任选，写清楚）</small></p></div></div>
+        </div>
+        <div class="card"><h3>块 #92　附录 B 节点说明表（第 2 行）<small><span class="tag">表格</span></small></h3>
+          <table><tr><th>节点编号</th><th>节点名称</th><th>责任部门</th><th>岗位</th><th>输出文档</th></tr><tr><td>020</td><td>提名设总</td><td>项目管理部</td><td>部长</td><td>设总任命单</td></tr></table>
+        </div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<section class="wf-page" data-nav="评测集" data-title="评测集" data-desc="自己出题、标准答案、一键跑分" data-note="交付时必须附上这一页的跑分结果">
+  <header><h1>评测集</h1><span class="grow"></span><button class="ghost"><i class="ri-upload-2-line"></i>导入 CSV</button><button><i class="ri-play-line"></i>全部运行</button></header>
+  <main>
+    <div class="stats"><div><b>86%</b>总体正确<small>43 / 50</small></div><div><b>70%</b>流程图题<small>7 / 10</small></div><div><b>92%</b>表格题<small>11 / 12</small></div><div><b>100%</b>拒答题<small>5 / 5</small></div><div><b>2.8 秒</b>平均用时</div></div>
+    <div class="bar"><select><option>全部类型</option><option>流程图</option><option>表格</option><option>目录</option><option>版本</option><option>扫描件</option><option>拒答</option></select><select><option>全部结果</option><option>错误</option></select><span class="grow"></span><small>上次运行 11-20 16:40</small></div>
+    <div class="card"><table>
+      <tr><th style="width:6em">类型</th><th>问题</th><th>标准答案</th><th>系统回答</th><th style="width:6em">出处对</th><th style="width:6em">结果</th></tr>
+      <tr><td><span class="tag info">流程图</span></td><td>设计变更分为哪几类？</td><td>小型、一般、重大</td><td>小型、一般、重大设计变更</td><td><span class="dot ok">是</span></td><td><span class="tag ok">正确</span></td></tr>
+      <tr class="on"><td><span class="tag info">流程图</span></td><td>例外转呈申请批准后放在哪里？</td><td>附在项目计划中</td><td>文件中没有找到相关规定</td><td><span class="dot err">否</span></td><td><span class="tag err">错误</span></td></tr>
+      <tr><td><span class="tag">表格</span></td><td>节点 020 由谁处理？</td><td>项目管理部 部长</td><td>项目管理部部长</td><td><span class="dot ok">是</span></td><td><span class="tag ok">正确</span></td></tr>
+      <tr><td><span class="tag warn">拒答</span></td><td>年终奖怎么发？</td><td>（应拒答）</td><td>文件中没有找到相关规定</td><td>—</td><td><span class="tag ok">正确</span></td></tr>
+    </table><div class="pager"><a class="on">1</a><a>2</a><a>3</a><small>共 50 题</small></div></div>
+  </main>
+</section>
+<!-- WF:PAGES-END -->
+<script>/* 运行时：复制壳并点亮菜单、标题条和编号、目录、文档标题、按宽度缩放。不做交互，不改页面内容。 */
+(function () {
+  var pages = [].slice.call(document.querySelectorAll('.wf-page'));
+  var doc = document.querySelector('.wf-doc');
+  var h1 = doc && doc.querySelector('h1');
+  if (h1) document.title = h1.textContent.trim();
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+  // 菜单项自己的文字：不算图标和 small 角标
+  function label(a) {
+    var c = a.cloneNode(true);
+    c.querySelectorAll('i,small').forEach(function (n) { n.remove(); });
+    return c.textContent.trim();
+  }
+
+  var toc = el('nav', 'wf-toc'), last = 0;
+  pages.forEach(function (page) {
+    var d = page.dataset;
+    // 壳：有 data-nav 才复制；按文字完全匹配，点亮第一项
+    var tpl = d.nav != null && document.getElementById(d.shell || 'wf-shell');
+    if (tpl && tpl.content) {
+      page.prepend(tpl.content.cloneNode(true));
+      var links = page.querySelectorAll(':scope>aside a,:scope>nav a');
+      for (var i = 0; i < links.length; i++) {
+        if (d.nav.trim() && label(links[i]) === d.nav.trim()) { links[i].classList.add('on'); break; }
+      }
+    }
+    // 编号：data-no 优先，其余接着上一个数字往下数（2a、2b 之后是 3）
+    var no = d.no || String(last + 1);
+    if (!isNaN(parseInt(no, 10))) last = parseInt(no, 10);
+    // 标题条（框外）：编号 + 页面名 + 说明 + ref，下面是批注
+    var item = el('div', 'wf-item'), bar = el('div', 'wf-title');
+    item.id = 'p' + no;
+    bar.append(el('b', '', no), el('strong', '', d.title || '未命名页面'));
+    if (d.desc) bar.append(el('span', '', d.desc));
+    if (d.ref) bar.append(el('em', '', d.ref));
+    page.before(item);
+    item.append(bar);
+    if (d.note) item.append(el('div', 'wf-note', d.note));
+    item.append(page);
+    // 目录
+    var a = el('a');
+    a.href = '#' + item.id;
+    a.append(el('b', '', no), d.title || '');
+    toc.append(a);
+  });
+  var anchor = doc || document.querySelector('.wf-banner');
+  if (pages.length) anchor ? anchor.after(toc) : document.body.prepend(toc);
+
+  // 缩放：页面框比可用宽度宽就用 zoom 缩小，不放大
+  function fit() {
+    pages.forEach(function (p) { p.style.zoom = ''; });
+    var cs = getComputedStyle(document.body);
+    var room = document.body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var widths = pages.map(function (p) { return p.offsetWidth; });
+    pages.forEach(function (p, i) {
+      if (widths[i] > room) p.style.zoom = Math.floor(room / widths[i] * 1000) / 1000;
+    });
+  }
+  fit();
+  addEventListener('resize', fit);
+  addEventListener('load', fit);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Validated CPU runtime; 3.3.1 triggers a oneDNN/PIR error with these models.
+paddlepaddle==3.2.2
+paddleocr==3.7.0
+paddlex==3.7.2
+PyMuPDF==1.26.6
+pydantic>=2.10,<3
+PyYAML>=6,<7
+Pillow>=11,<14
+
+# HTTP 服务与任务 worker
+fastapi>=0.115,<1
+uvicorn>=0.32,<1
+python-multipart>=0.0.12
+
+# 批次 Excel 导出
+openpyxl>=3.1,<4
