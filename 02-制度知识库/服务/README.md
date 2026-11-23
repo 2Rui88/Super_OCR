@@ -33,20 +33,6 @@ copy .env.example .env                                        # 填 DASHSCOPE_AP
 打开 `http://127.0.0.1:8800/`（问答 / 文档库 / 评测三屏）。摄入队列内嵌于 API 进程，
 无需单独 worker 进程。
 
-## 配置（.env / 环境变量）
-
-| 变量 | 默认 | 说明 |
-|---|---|---|
-| `DASHSCOPE_API_KEY` | （必填） | 阿里百炼密钥，只进 `.env`（已 gitignore），不落库不下发 |
-| `KB_P1_BASE_URL` | `http://127.0.0.1:8700/api/v1` | 项目一地址 |
-| `KB_EMBED_MODEL` | `tongyi-embedding-vision-flash-2026-03-06` | 向量模型（原生端点，768 维） |
-| `KB_CHAT_MODEL` | `qwen3.5-flash` | 生成/改写/判分（兼容端点） |
-| `KB_VL_MODEL` | `qwen3.8-omni-flash` | 流程图结构描述（原生端点） |
-| `KB_REJECT_THRESHOLD` | `0.80` | 拒答阈值（向量 Top1 余弦，且关键词路无命中才拒；通义 embedding 实测分布校准） |
-| `KB_LEASE_TIMEOUT` | `300` | 租约超时秒数 |
-| `KB_SOFFICE` | 自动探测 | LibreOffice soffice.exe 路径 |
-
-无密钥时自动降级：跳过向量化与 VL（关键词检索、出处、文档库全部可用），问答生成返回明确错误。
 
 ## API 概览（`/api/v1`）
 
