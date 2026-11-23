@@ -9,6 +9,7 @@ import json
 import sys
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +45,18 @@ class TaskStoreTest(unittest.TestCase):
     def _create(self, task_type="card", name="a.jpg"):
         return self.store.create_task(task_type=task_type, filename=name,
                                       file_sha256=f"sha-{name}", file_path=f"/x/{name}")
+
+    def test_concurrent_document_submissions_share_one_task_for_same_key(self):
+        def submit(_):
+            return self.store.create_task(
+                task_type="document_scan", filename="a.pdf", file_sha256="sha-a",
+                file_path="/x/a.pdf", idempotency_key="submission-a")
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            ids = list(executor.map(submit, range(8)))
+        self.assertEqual(len(set(ids)), 1)
+        self.assertEqual(self.store.claim_next_task("w1").id, ids[0])
+        self.assertIsNone(self.store.claim_next_task("w2", max_running_documents=3))
 
     def test_claim_follows_fifo_and_counts_attempts(self):
         first = self._create(name="a.jpg")
@@ -152,8 +165,10 @@ class TaskStoreTest(unittest.TestCase):
             db.close()
         store = TaskStore(legacy)  # 迁移在构造时发生
         self.assertIsNone(store.get_task(1)["pages_progress"])
-        store.create_task(task_type="document_scan", filename="b.pdf",
-                          file_sha256="s2", file_path="/x/b.pdf")
+        self.assertIsNone(store.get_task(1)["idempotency_key"])
+        submission = dict(task_type="document_scan", filename="b.pdf",
+                          file_sha256="s2", file_path="/x/b.pdf", idempotency_key="new")
+        self.assertEqual(store.create_task(**submission), store.create_task(**submission))
 
 
 class ImageRoutingTest(unittest.TestCase):
@@ -303,6 +318,22 @@ class ApiTest(unittest.TestCase):
             "file": ("doc.pdf", b"%PDF-1.4 minimal", "application/pdf")})
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.json()["status"], "queued")
+
+    def test_document_upload_reuses_task_by_idempotency_key(self):
+        headers = {"Idempotency-Key": "submission-a"}
+        files = {"file": ("doc.pdf", b"%PDF-1.4 first", "application/pdf")}
+        first = self.client.post("/api/v1/documents", files=files, headers=headers)
+        again = self.client.post("/api/v1/documents", files=files, headers=headers)
+        self.assertEqual((first.status_code, again.status_code), (202, 202))
+        self.assertEqual(first.json()["task_id"], again.json()["task_id"])
+
+        different = {"file": ("doc.pdf", b"%PDF-1.4 different", "application/pdf")}
+        conflict = self.client.post("/api/v1/documents", files=different, headers=headers)
+        self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(conflict.json()["detail"]["error_code"], "IDEMPOTENCY_CONFLICT")
+
+        without_key = self.client.post("/api/v1/documents", files=files)
+        self.assertNotEqual(without_key.json()["task_id"], first.json()["task_id"])
 
     def test_task_detail_exposes_pages_progress(self):
         """GET /tasks 带 pages_progress：前端逐页状态的数据源。"""

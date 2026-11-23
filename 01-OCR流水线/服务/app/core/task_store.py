@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     error_message TEXT,
     attempts      INTEGER NOT NULL DEFAULT 0,
     worker_id     TEXT,
+    idempotency_key TEXT,
     created_at    TEXT NOT NULL,
     started_at    TEXT,
     finished_at   TEXT
@@ -148,12 +149,17 @@ class ClaimedTask:
     hint_type: str | None
 
 
+class IdempotencyConflict(ValueError):
+    """同一提交键已用于另一份文档。"""
+
+
 class TaskStore:
     def __init__(self, db_path: str | Path):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.executescript(_SCHEMA)
+            db.execute("BEGIN IMMEDIATE")
             self._migrate(db)
 
     @staticmethod
@@ -162,6 +168,10 @@ class TaskStore:
         columns = {row[1] for row in db.execute("PRAGMA table_info(tasks)")}
         if "pages_progress" not in columns:
             db.execute("ALTER TABLE tasks ADD COLUMN pages_progress TEXT")
+        if "idempotency_key" not in columns:
+            db.execute("ALTER TABLE tasks ADD COLUMN idempotency_key TEXT")
+        db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_idempotency_key"
+                   " ON tasks(idempotency_key)")
 
     @contextmanager
     def _connect(self):
@@ -178,14 +188,26 @@ class TaskStore:
     # ------------------------------------------------------------ 任务写入/查询
 
     def create_task(self, *, task_type: str, filename: str, file_sha256: str,
-                    file_path: str | Path, hint_type: str | None = None) -> int:
+                    file_path: str | Path, hint_type: str | None = None,
+                    idempotency_key: str | None = None) -> int:
         with self._connect() as db:
-            cursor = db.execute(
+            inserted = db.execute(
                 "INSERT INTO tasks(task_type, filename, file_sha256, file_path,"
-                " hint_type, created_at) VALUES (?,?,?,?,?,?)",
-                (task_type, filename, file_sha256, str(file_path), hint_type, _now()),
-            )
-            return int(cursor.lastrowid)
+                " hint_type, created_at, idempotency_key) VALUES (?,?,?,?,?,?,?)"
+                " ON CONFLICT(idempotency_key) DO NOTHING RETURNING id",
+                (task_type, filename, file_sha256, str(file_path), hint_type, _now(),
+                 idempotency_key),
+            ).fetchone()
+            if inserted is not None:
+                return inserted["id"]
+            existing = db.execute(
+                "SELECT id FROM tasks WHERE idempotency_key=? AND task_type=?"
+                " AND filename=? AND file_sha256=? AND hint_type IS ?",
+                (idempotency_key, task_type, filename, file_sha256, hint_type),
+            ).fetchone()
+            if existing is None:
+                raise IdempotencyConflict("相同提交键已用于不同的任务请求")
+            return existing["id"]
 
     def create_failed_task(self, *, task_type: str, filename: str,
                            error_code: str, error_message: str) -> int:
