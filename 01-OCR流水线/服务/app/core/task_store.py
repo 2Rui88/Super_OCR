@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS workers (
     card_model_loaded      INTEGER NOT NULL DEFAULT 0,
     document_model_loaded  INTEGER NOT NULL DEFAULT 0,
     current_task_id        INTEGER,
-    status                 TEXT NOT NULL DEFAULT 'idle'  -- idle | busy
+    status                 TEXT NOT NULL DEFAULT 'idle'  -- idle | busy | suspect | lost
 );
 
 CREATE TABLE IF NOT EXISTS batches (
@@ -341,35 +341,59 @@ class TaskStore:
                  current_task_id, "busy" if current_task_id else "idle"),
             )
 
+    def mark_suspect_workers(self, stale_seconds: float, reap_seconds: float) -> list[str]:
+        """记录新进入缓冲期的 worker；下一次心跳恢复 idle 或 busy。"""
+        now = datetime.now(timezone.utc)
+        warn_at = (now - timedelta(seconds=stale_seconds)).isoformat(timespec="seconds")
+        reap_at = (now - timedelta(seconds=reap_seconds)).isoformat(timespec="seconds")
+        with self._connect() as db:
+            rows = db.execute(
+                "UPDATE workers SET status='suspect'"
+                " WHERE status IN ('idle', 'busy') AND last_heartbeat_at < ?"
+                " AND last_heartbeat_at >= ? RETURNING worker_id",
+                (warn_at, reap_at),
+            ).fetchall()
+        return [row["worker_id"] for row in rows]
+
     def reap_stale_workers(self, stale_seconds: float) -> list[str]:
-        """心跳过期的 worker：其 running 任务标 WORKER_LOST，worker 行标 lost。"""
+        """回收仍超过心跳阈值的 worker，并在同一事务内标记其 running 任务。"""
         cutoff = (datetime.now(timezone.utc) - timedelta(seconds=stale_seconds)).isoformat(
             timespec="seconds")
-        lost: list[str] = []
         with self._connect() as db:
-            stale = db.execute(
-                "SELECT worker_id FROM workers WHERE last_heartbeat_at < ? AND status != 'lost'",
+            rows = db.execute(
+                "UPDATE workers SET status='lost' WHERE last_heartbeat_at < ?"
+                " AND status != 'lost' RETURNING worker_id",
                 (cutoff,),
             ).fetchall()
-            for row in stale:
-                worker_id = row["worker_id"]
-                db.execute(
+            lost = [row["worker_id"] for row in rows]
+            if lost:
+                finished_at = _now()
+                db.executemany(
                     "UPDATE tasks SET status='failed', error_code='WORKER_LOST',"
                     " error_message='worker 心跳过期，任务被回收', finished_at=?"
                     " WHERE worker_id=? AND status='running'",
-                    (_now(), worker_id),
+                    [(finished_at, worker_id) for worker_id in lost],
                 )
-                db.execute("UPDATE workers SET status='lost' WHERE worker_id=?", (worker_id,))
-                lost.append(worker_id)
         return lost
 
-    def list_workers(self, stale_seconds: float) -> list[dict]:
-        cutoff = (datetime.now(timezone.utc) - timedelta(seconds=stale_seconds)).isoformat(
-            timespec="seconds")
+    def list_workers(self, stale_seconds: float, *, reap_seconds: float | None = None) -> list[dict]:
+        reap_seconds = stale_seconds if reap_seconds is None else reap_seconds
+        now = datetime.now(timezone.utc)
+        warn_at = (now - timedelta(seconds=stale_seconds)).isoformat(timespec="seconds")
+        reap_at = (now - timedelta(seconds=reap_seconds)).isoformat(timespec="seconds")
         with self._connect() as db:
             rows = db.execute("SELECT * FROM workers ORDER BY worker_id").fetchall()
-        return [dict(row) | {"alive": row["status"] != "lost" and row["last_heartbeat_at"] >= cutoff}
-                for row in rows]
+        workers = []
+        for row in rows:
+            if row["status"] == "lost" or row["last_heartbeat_at"] < reap_at:
+                heartbeat_status = "lost"
+            elif row["last_heartbeat_at"] < warn_at:
+                heartbeat_status = "suspect"
+            else:
+                heartbeat_status = "healthy"
+            workers.append(dict(row) | {"alive": heartbeat_status == "healthy",
+                                        "heartbeat_status": heartbeat_status})
+        return workers
 
     def healthcheck(self) -> bool:
         """SQLite 可写探针：写入并清理一张探测表。"""

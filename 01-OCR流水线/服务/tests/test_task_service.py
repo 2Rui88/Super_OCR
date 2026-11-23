@@ -10,7 +10,9 @@ import sys
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -375,6 +377,52 @@ class ApiTest(unittest.TestCase):
         body = self.client.get("/api/v1/health").json()
         self.assertEqual((body["status"], body["components"]["sqlite_writable"],
                           body["components"]["workers"]), ("degraded", True, []))
+
+    def test_heartbeat_warns_and_recovers_before_reaping(self):
+        task_id = self.store.create_task(task_type="document_scan", filename="doc.pdf",
+                                         file_sha256="sha", file_path="/x/doc.pdf")
+        self.store.claim_next_task("w1")
+        warn_seconds = self.settings.worker_stale_seconds
+        reap_seconds = self.settings.worker_reap_seconds
+        self.assertEqual((warn_seconds, reap_seconds), (30, 60))
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+        def heartbeat():
+            self.store.heartbeat("w1", pid=1, card_model_loaded=True,
+                                 document_model_loaded=True, current_task_id=task_id)
+
+        def check_health(status, heartbeat_status, alive):
+            body = self.client.get("/api/v1/health").json()
+            worker = body["components"]["workers"][0]
+            self.assertEqual((body["status"], worker["heartbeat_status"], worker["alive"]),
+                             (status, heartbeat_status, alive))
+
+        with patch("app.core.task_store.datetime", wraps=datetime) as clock:
+            clock.now.return_value = start
+            heartbeat()
+            clock.now.return_value = start + timedelta(seconds=30)
+            check_health("ok", "healthy", True)
+
+            clock.now.return_value = start + timedelta(seconds=31)
+            self.assertEqual(self.store.mark_suspect_workers(warn_seconds, reap_seconds), ["w1"])
+            self.assertEqual(self.store.mark_suspect_workers(warn_seconds, reap_seconds), [])
+            check_health("degraded", "suspect", False)
+            self.assertEqual(self.store.reap_stale_workers(reap_seconds), [])
+            self.assertEqual(self.store.get_task(task_id)["status"], "running")
+
+            heartbeat()
+            check_health("ok", "healthy", True)
+            clock.now.return_value = start + timedelta(seconds=91)
+            self.assertEqual(self.store.mark_suspect_workers(warn_seconds, reap_seconds), ["w1"])
+            self.assertEqual(self.store.reap_stale_workers(reap_seconds), [])
+            self.assertEqual(self.store.get_task(task_id)["status"], "running")
+
+            clock.now.return_value = start + timedelta(seconds=92)
+            self.assertEqual(self.store.reap_stale_workers(reap_seconds), ["w1"])
+            check_health("degraded", "lost", False)
+            task = self.store.get_task(task_id)
+            self.assertEqual((task["status"], task["error_code"]), ("failed", "WORKER_LOST"))
+            self.assertEqual(self.store.reap_stale_workers(reap_seconds), [])
 
     def test_missing_task_returns_404_with_code(self):
         response = self.client.get("/api/v1/tasks/999")

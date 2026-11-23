@@ -177,13 +177,17 @@ Base URL：`http://<host>:8700/api/v1`（开发默认端口 8700，可用 `OCR_A
 
 ```json
 {"status": "ok", "components": {"sqlite_writable": true, "workers": [
-  {"worker_id": "worker-1", "alive": true, "card_model_loaded": true,
+  {"worker_id": "worker-1", "alive": true, "heartbeat_status": "healthy", "card_model_loaded": true,
    "document_model_loaded": false, "current_task_id": null}]}}
 ```
 
 - `ok`：SQLite 可写且至少一个 worker 心跳新鲜；
-- `degraded`：库正常但无 worker 在线（只影响新任务，历史任务可查）；
+- `degraded`：SQLite 可写，但没有心跳新鲜的 worker；
 - `error`（HTTP 503）：SQLite 不可写。
+
+`heartbeat_status` 为 `healthy`、`suspect` 或 `lost`。默认超过 30 秒进入
+`suspect`，保留运行中的任务。超过 60 秒则显示 `lost`，运行中的任务由 worker
+扫描回收。`alive` 仍表示心跳新鲜，只在 `healthy` 时为 `true`。
 
 ## 错误码
 

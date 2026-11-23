@@ -54,10 +54,11 @@ class Settings:
 
     # 同步接口：POST /cards 最多等多久，超时转 202 + task_id
     sync_wait_seconds: float = 60.0
-    # worker 轮询间隔与心跳节奏；心跳超过 stale 秒视为 worker 失联
+    # 心跳超过 stale 秒进入告警，超过 reap 秒才回收任务。
     task_poll_seconds: float = 1.0
     heartbeat_seconds: float = 5.0
     worker_stale_seconds: float = 30.0
+    worker_reap_seconds: float = 60.0
     # 扫描文档任务全局并发上限（PP-StructureV3 重，默认保守 1；大内存机器可调高）
     max_running_documents: int = 1
 
@@ -100,6 +101,7 @@ class Settings:
             task_poll_seconds=_env_float("OCR_TASK_POLL_SECONDS", cls.task_poll_seconds),
             heartbeat_seconds=_env_float("OCR_HEARTBEAT_SECONDS", cls.heartbeat_seconds),
             worker_stale_seconds=_env_float("OCR_WORKER_STALE_SECONDS", cls.worker_stale_seconds),
+            worker_reap_seconds=_env_float("OCR_WORKER_REAP_SECONDS", cls.worker_reap_seconds),
             max_running_documents=_env_int("OCR_MAX_RUNNING_DOCUMENTS",
                                            cls.max_running_documents),
             max_upload_mb=_env_int("OCR_MAX_UPLOAD_MB", cls.max_upload_mb),
@@ -132,6 +134,8 @@ class Settings:
             raise ValueError("OCR_MAX_DOCUMENT_PAGES must be >= 1")
         if self.convert_timeout_seconds <= 0:
             raise ValueError("OCR_CONVERT_TIMEOUT_SECONDS must be > 0")
+        if not 0 < self.worker_stale_seconds <= self.worker_reap_seconds < float("inf"):
+            raise ValueError("Expected 0 < OCR_WORKER_STALE_SECONDS <= OCR_WORKER_REAP_SECONDS < inf")
 
 
 settings = Settings.from_env()

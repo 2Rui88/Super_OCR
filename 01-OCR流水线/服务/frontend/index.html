@@ -417,11 +417,14 @@ function switchTab(name) { document.querySelector(`#nav button[data-tab=${name}]
 async function refreshHealth() {
   try {
     const d = await (await fetch(`${API}/health`)).json();
-    const alive = (d.components.workers || []).filter(w => w.alive).length;
+    const workers = d.components.workers || [];
+    const alive = workers.filter(w => w.alive).length;
+    const suspect = workers.filter(w => w.heartbeat_status === "suspect").length;
     const h = $("health");
     h.classList.toggle("ok", d.status === "ok");
     h.innerHTML = `<span class="dot"></span><b>${d.status === "ok" ? "模型在线" : d.status}</b>` +
-      ` · worker ${alive}/${d.components.workers.length} · SQLite ${d.components.sqlite_writable ? "正常" : "异常"}`;
+      ` · worker ${alive}/${workers.length}${suspect ? `（心跳延迟 ${suspect}）` : ""}` +
+      ` · SQLite ${d.components.sqlite_writable ? "正常" : "异常"}`;
   } catch { $("health").innerHTML = `<span class="dot"></span><b>服务不可达</b>`; }
 }
 refreshHealth(); setInterval(refreshHealth, 8000);

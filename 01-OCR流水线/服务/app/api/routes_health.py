@@ -16,7 +16,8 @@ def health(request: Request):
     settings = request.app.state.settings
     store = request.app.state.store
     sqlite_ok = store.healthcheck()
-    workers = store.list_workers(settings.worker_stale_seconds) if sqlite_ok else []
+    workers = (store.list_workers(settings.worker_stale_seconds,
+                                  reap_seconds=settings.worker_reap_seconds) if sqlite_ok else [])
     alive = [w for w in workers if w["alive"]]
     status = "ok" if sqlite_ok and alive else ("degraded" if sqlite_ok else "error")
     return JSONResponse(
@@ -29,6 +30,7 @@ def health(request: Request):
                     {
                         "worker_id": w["worker_id"],
                         "alive": w["alive"],
+                        "heartbeat_status": w["heartbeat_status"],
                         "card_model_loaded": bool(w["card_model_loaded"]),
                         "document_model_loaded": bool(w["document_model_loaded"]),
                         "current_task_id": w["current_task_id"],

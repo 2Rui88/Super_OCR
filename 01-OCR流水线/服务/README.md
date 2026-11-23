@@ -19,7 +19,9 @@
 - 任务库 `data/tasks.sqlite3`（WAL）承担队列/状态机/心跳，与结果缓存分离；
 - 文档任务全局并发默认 1（`OCR_MAX_RUNNING_DOCUMENTS` 可调，领取 SQL 互斥；
   生产已调 3），证件任务多 worker 并行；
-- worker 重启恢复自己遗留的 running 任务；失联由心跳收割（WORKER_LOST）。
+- worker 默认每 5 秒上报心跳。超过 30 秒未上报时告警，任务继续保持 `running`。
+  超过 60 秒后由其他 worker 扫描回收，任务标为 `WORKER_LOST`。
+  告警和回收分别由 `OCR_WORKER_STALE_SECONDS` 与 `OCR_WORKER_REAP_SECONDS` 配置。
 
 **部署依赖**：Office 转换需要 LibreOffice + 中文字体（安装命令见
 [deploy/部署文档.md](../../deploy/部署文档.md)，`OCR_SOFFICE_BIN` 可指定

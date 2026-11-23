@@ -240,7 +240,11 @@ def main() -> int:
                                                        if document_reader else False),
                                 current_task_id=state.current())
                 _maybe_reload_registry()
-                for lost in store.reap_stale_workers(config.worker_stale_seconds):
+                for suspect in store.mark_suspect_workers(config.worker_stale_seconds,
+                                                          config.worker_reap_seconds):
+                    log.warning("worker %s 心跳超过 %gs，进入缓冲期", suspect,
+                                config.worker_stale_seconds)
+                for lost in store.reap_stale_workers(config.worker_reap_seconds):
                     log.warning("worker %s 心跳过期，其任务已标 WORKER_LOST", lost)
             except sqlite3.Error:
                 log.warning("心跳写入失败，稍后重试", exc_info=True)
