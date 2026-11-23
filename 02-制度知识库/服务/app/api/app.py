@@ -22,8 +22,10 @@ logging.basicConfig(level=logging.INFO,
 async def lifespan(app: FastAPI):
     init_db()
     worker.start_worker()
-    yield
-    await worker.stop_worker()
+    try:
+        yield
+    finally:
+        await worker.stop_worker()
 
 
 app = FastAPI(title="制度知识库", version="0.1.0", lifespan=lifespan)

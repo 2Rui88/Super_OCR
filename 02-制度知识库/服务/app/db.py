@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS documents (
     status         TEXT NOT NULL DEFAULT 'pending',  -- pending|processing|ready|failed
     phase          TEXT NOT NULL DEFAULT '',     -- 处理阶段描述（转格式/识别中 第n/N页/分块…）
     worker         TEXT NOT NULL DEFAULT '',     -- 租约持有者 主机名:pid
+    lease_token    TEXT,                         -- 每次领单生成，仅该次执行可写
     heartbeat_at   INTEGER NOT NULL DEFAULT 0,   -- unixepoch 秒；领单即第 0 跳
     attempts       INTEGER NOT NULL DEFAULT 0,
     error          TEXT NOT NULL DEFAULT '',
@@ -28,6 +29,8 @@ CREATE TABLE IF NOT EXISTS documents (
     superseded_by  INTEGER,                      -- 旧版指向新版 id（检索默认过滤）
     replaces_target INTEGER,                     -- 导入时声明的"替代旧版本"目标
     pdf_path       TEXT,                         -- 实际送识别的 PDF（原件或转换产物）
+    p1_request_key TEXT,                         -- POST 前持久化，响应丢失时用同一键重送
+    p1_task_id     INTEGER,                      -- 已收到的 OCR 任务编号
     p1_result_json TEXT,                         -- 项目一返回整包 = 事实源
     created_at     INTEGER NOT NULL,
     finished_at    INTEGER
@@ -132,6 +135,11 @@ def init_db() -> None:
         for column in ("tool_calls", "tool_call_id"):
             if column not in columns:
                 db.execute(f"ALTER TABLE messages ADD COLUMN {column} TEXT")
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(documents)")}
+        for column, sql_type in (("lease_token", "TEXT"), ("p1_request_key", "TEXT"),
+                                 ("p1_task_id", "INTEGER")):
+            if column not in columns:
+                db.execute(f"ALTER TABLE documents ADD COLUMN {column} {sql_type}")
 
 
 @contextmanager

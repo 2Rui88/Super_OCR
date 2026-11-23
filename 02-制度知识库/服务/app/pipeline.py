@@ -11,12 +11,12 @@ import logging
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 
 from app import figures, llm, queue, vector
 from app.config import settings
-from app.db import connect
 from app.p1client import P1Error, recognize_pdf
 
 log = logging.getLogger("kb.ingest")
@@ -55,29 +55,33 @@ def _find_soffice() -> str | None:
     return None
 
 
-def convert_to_pdf(src: Path, sha256: str) -> Path:
+def convert_to_pdf(src: Path, job: queue.ClaimedDoc) -> Path:
     """统一收敛到 PDF（此后只有一条解析路径）。pdf 直通；doc/docx 走 soffice，
     本机无 soffice 时退 Word COM。转换产物按内容寻址，重复导入零转换。"""
     if src.suffix.lower() == ".pdf":
         return src
     out_dir = settings.data_dir / "converted"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_pdf = out_dir / f"{sha256[:16]}.pdf"
+    out_pdf = out_dir / f"{job.sha256[:16]}.pdf"
     if out_pdf.exists():
         return out_pdf
-    tmp_pdf = out_dir / f"{sha256[:16]}.tmp.pdf"
-    soffice = _find_soffice()
-    if soffice:
-        cmd = [soffice, "--headless", "--norestore", "--convert-to", "pdf",
-               "--outdir", str(out_dir), str(src)]
-        proc = _run_cmd(cmd)
-        produced = out_dir / (src.stem + ".pdf")
-        if proc.returncode != 0 or not produced.exists():
-            raise RuntimeError(f"LibreOffice 转换失败（rc={proc.returncode}）")
-        produced.replace(tmp_pdf)
-    else:
-        _word_com_convert(src, tmp_pdf)
-    tmp_pdf.replace(out_pdf)  # 原子落位
+    # 转换线程可能在协程取消后继续运行。临时文件独立，持有租约才能发布缓存。
+    with tempfile.TemporaryDirectory(dir=out_dir) as directory:
+        tmp_dir = Path(directory)
+        tmp_pdf = tmp_dir / f"{src.stem}.pdf"
+        soffice = _find_soffice()
+        if soffice:
+            profile = (tmp_dir.resolve() / "profile").as_uri()
+            cmd = [soffice, f"-env:UserInstallation={profile}", "--headless", "--norestore",
+                   "--convert-to", "pdf", "--outdir", str(tmp_dir), str(src)]
+            proc = _run_cmd(cmd)
+            if proc.returncode != 0 or not tmp_pdf.exists():
+                raise RuntimeError(f"LibreOffice 转换失败（rc={proc.returncode}）")
+        else:
+            _word_com_convert(src, tmp_pdf)
+        with queue.lease_write(job.id, job.lease_token):
+            if not out_pdf.exists():
+                tmp_pdf.replace(out_pdf)
     return out_pdf
 
 
@@ -109,7 +113,8 @@ def _word_com_convert(src: Path, dst: Path) -> None:
 
 # ---------------------------------------------------------------- A4+A5 打档案与分装
 
-def pack_chunks(doc_id: int, filename: str, p1_result: dict) -> tuple[int, int, int]:
+def pack_chunks(doc_id: int, lease_token: str, filename: str,
+                p1_result: dict) -> tuple[int, int, int]:
     """过滤页眉页脚、维护章节面包屑、按类型分装，写入 chunks 行。
 
     返回 (页数, 表格数, 流程图数)。embeddings 阶段三回填。
@@ -194,7 +199,7 @@ def pack_chunks(doc_id: int, filename: str, p1_result: dict) -> tuple[int, int, 
                 pending_conf.extend(confs)
     flush_text()
 
-    with connect() as db:
+    with queue.lease_write(doc_id, lease_token) as db:
         db.execute("DELETE FROM chunks WHERE doc_id=?", (doc_id,))
         db.executemany(
             "INSERT INTO chunks (doc_id, page_num, bbox, type, row_index, heading_path,"
@@ -309,7 +314,7 @@ async def rescue_figures(job, pdf_path: str | None, p1_result: dict, set_phase) 
         set_phase(f"流程图补救 第{n}页")
         single = await asyncio.to_thread(_page_to_image_pdf, pdf_path, n, job.sha256)
         ocr_result = await recognize_pdf(
-            str(single), alive=lambda: queue.holds_lease(job.id, job.worker))
+            str(single), alive=lambda: queue.holds_lease(job.id, job.lease_token))
         ocr_page = ocr_result["pages"][0]
         for i, p in enumerate(p1_result["pages"]):
             if p["page_num"] == n:
@@ -326,67 +331,67 @@ async def rescue_figures(job, pdf_path: str | None, p1_result: dict, set_phase) 
 
 # ---------------------------------------------------------------- 编排入口
 
-async def run_ingest(job) -> tuple[bool, str]:
-    """A2→A7 编排（worker 的 _process 调用）。
-
-    job 需提供 id/filename/fmt/sha256/pdf_path/p1_result_json/worker/replaces_target；
-    重新解析场景 p1_result_json 已在档：跳过 A2/A3 直接重放 A4（不重烧 OCR）。
-    无 DASHSCOPE_API_KEY 时 A6 的 VL 与 A7 向量化安全降级（关键词检索仍可用）。
-    """
+async def run_ingest(job: queue.ClaimedDoc) -> tuple[bool, str]:
+    """从已保存的 OCR 提交或结果继续，完成切块与索引。"""
 
     def set_phase(text: str) -> None:
-        queue.set_phase(job.id, job.worker, text)
+        queue.set_phase(job.id, job.lease_token, text)
 
     try:
-        src = Path(job.pdf_path) if job.pdf_path else _stored_upload(job.sha256, job.filename)
-        if job.p1_result_json:  # D 链路：重放，不重烧 OCR
+        if job.p1_result_json:
             p1_result = json.loads(job.p1_result_json)
             pdf_path = job.pdf_path
         else:
+            src = Path(job.pdf_path) if job.pdf_path else _stored_upload(job.sha256, job.filename)
             set_phase("转格式" if src.suffix.lower() != ".pdf" else "排队识别")
-            pdf_path = await asyncio.to_thread(convert_to_pdf, src, job.sha256)
+            pdf_path = str(await asyncio.to_thread(convert_to_pdf, src, job))
+
+            def save_submission(request_key: str | None, task_id: int | None) -> None:
+                queue.save_submission(job.id, job.lease_token, pdf_path, request_key, task_id)
+
             set_phase("识别中")
-            # alive：轮询期间持续自检租约，行被重置/回收立即放弃，不给 P1 留孤儿
             p1_result = await recognize_pdf(
-                str(pdf_path), on_phase=lambda p: set_phase(p),
-                alive=lambda: queue.holds_lease(job.id, job.worker))
-        # 重放前清旧块旧向量（chunk id 为 AUTOINCREMENT，不与新块冲突，但须摘索引）
-        await vector.remove_doc(job.id)
-        rescued = await rescue_figures(job, str(pdf_path) if pdf_path else None,
-                                       p1_result, set_phase)
+                pdf_path, task_id=job.p1_task_id, request_key=job.p1_request_key,
+                save_submission=save_submission, on_phase=set_phase,
+                alive=lambda: queue.holds_lease(job.id, job.lease_token))
+            queue.save_ocr_result(job.id, job.lease_token, json.dumps(p1_result, ensure_ascii=False))
+        rescued = await rescue_figures(job, pdf_path, p1_result, set_phase)
         if rescued:
+            queue.save_ocr_result(job.id, job.lease_token, json.dumps(p1_result, ensure_ascii=False))
             log.info("流程图补救 %d 页：doc=%s", rescued, job.id)
         set_phase("分块入库")
+        # 重放前摘除旧块的向量，再替换 SQLite 块。
+        await vector.remove_doc(job.id, lease_token=job.lease_token)
         pages, tables, figure_count = await asyncio.to_thread(
-            pack_chunks, job.id, job.filename, p1_result)
+            pack_chunks, job.id, job.lease_token, job.filename, p1_result)
         set_phase("图块加工")
-        await figures.process_doc_figures(job.id, str(pdf_path) if pdf_path else None)
+        await figures.process_doc_figures(job.id, job.lease_token, pdf_path)
         set_phase("向量化上架")
-        await embed_doc_chunks(job.id, job.filename)
-        await vector.add_chunks(job.id)
-        result_json = json.dumps(p1_result, ensure_ascii=False)
-        status = queue.finish(job.id, job.worker, ok=True,
-                              counts=(pages, tables, figure_count),
-                              p1_result_json=result_json, pdf_path=str(pdf_path))
+        await embed_doc_chunks(job.id, job.lease_token, job.filename)
+        await vector.add_chunks(job.id, job.lease_token)
+        status = queue.finish(job.id, job.lease_token, ok=True,
+                              counts=(pages, tables, figure_count))
         if status is None:
             return False, "租约已丢失，本次执行作废"
         return True, ""
+    except queue.LeaseLost as exc:
+        return False, str(exc)
     except P1Error as exc:
-        queue.finish(job.id, job.worker, ok=False, error=str(exc))
+        queue.finish(job.id, job.lease_token, ok=False, error=str(exc))
         return False, str(exc)
     except Exception as exc:
         log.exception("摄入失败 doc=%s", job.id)
-        queue.finish(job.id, job.worker, ok=False,
+        queue.finish(job.id, job.lease_token, ok=False,
                      error=f"{type(exc).__name__}: {exc}")
         return False, f"{type(exc).__name__}: {exc}"
 
 
-async def embed_doc_chunks(doc_id: int, filename: str) -> int:
+async def embed_doc_chunks(doc_id: int, lease_token: str, filename: str) -> int:
     """A7：seek_text 超过"文件名+2字"门槛的块批量向量化，BLOB 即真身。"""
     if not llm.available():
         log.info("未配置 DASHSCOPE_API_KEY，跳过向量化（关键词检索仍可用）")
         return 0
-    with connect() as db:
+    with queue.lease_write(doc_id, lease_token) as db:
         rows = db.execute(
             "SELECT id, seek_text FROM chunks"
             " WHERE doc_id=? AND embedding IS NULL AND length(seek_text) > ?",
@@ -398,7 +403,7 @@ async def embed_doc_chunks(doc_id: int, filename: str) -> int:
     except Exception:
         log.warning("向量化失败 doc=%s（块保留，稍后可手动重建）", doc_id, exc_info=True)
         return 0
-    with connect() as db:
+    with queue.lease_write(doc_id, lease_token) as db:
         db.executemany(
             "UPDATE chunks SET embedding=? WHERE id=?",
             [(vector.vec_to_blob(v), r["id"]) for r, v in zip(rows, vectors)])

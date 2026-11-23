@@ -2,7 +2,7 @@
 
 faiss_id 直接复用 chunk id（AUTOINCREMENT 不复用，删除/重放安全）。
 索引文件是可再生缓存：损坏或换模型维度不符时，从 BLOB 全量重放（零 API 费）。
-所有操作持进程内锁串行（单实例 asyncio 足够，无需文件锁）。
+索引写入由执行写入的线程持锁，协程取消时也会等实际写入结束才释放锁。
 """
 from __future__ import annotations
 
@@ -12,15 +12,17 @@ import logging
 import struct
 import time
 from pathlib import Path
+from threading import Lock
 
 import numpy as np
 
+from app import queue
 from app.config import settings
 from app.db import connect
 
 log = logging.getLogger("kb.vector")
 
-_lock = asyncio.Lock()
+_lock = Lock()
 _index = None  # 惰性加载的单例
 
 
@@ -73,52 +75,50 @@ def blob_to_vec(blob: bytes) -> list[float]:
     return list(struct.unpack(f"{n}f", blob))
 
 
-async def add_chunks(doc_id: int) -> int:
+async def add_chunks(doc_id: int, lease_token: str) -> int:
     """A7 上架：读取本文档已写好 BLOB 的块，加入索引。返回入索引块数。"""
-    async with _lock:
-        def _do() -> int:
-            with connect() as db:
+    def _do() -> int:
+        with _lock:
+            with queue.lease_write(doc_id, lease_token) as db:
                 rows = db.execute(
                     "SELECT id, embedding FROM chunks"
                     " WHERE doc_id=? AND embedding IS NOT NULL AND faiss_id IS NULL",
                     (doc_id,)).fetchall()
-            if not rows:
-                return 0
-            ids = np.array([r["id"] for r in rows], dtype=np.int64)
-            mat = np.array([blob_to_vec(r["embedding"]) for r in rows],
-                           dtype=np.float32)
-            index = _load()
-            index.add_with_ids(mat, ids)
-            with connect() as db:
+                if not rows:
+                    return 0
+                ids = np.array([r["id"] for r in rows], dtype=np.int64)
+                mat = np.array([blob_to_vec(r["embedding"]) for r in rows],
+                               dtype=np.float32)
+                index = _load()
+                index.add_with_ids(mat, ids)
                 db.executemany("UPDATE chunks SET faiss_id=? WHERE id=?",
                                [(int(i), int(i)) for i in ids])
             _persist_locked()
             return len(rows)
-        return await asyncio.to_thread(_do)
+    return await asyncio.to_thread(_do)
 
 
-async def remove_doc(doc_id: int) -> int:
+async def remove_doc(doc_id: int, *, lease_token: str | None = None) -> int:
     """索引同步：删除文档 → 按 chunk id 增量摘（不重建）。"""
-    async with _lock:
-        def _do() -> int:
-            with connect() as db:
+    def _do() -> int:
+        with _lock:
+            transaction = (queue.lease_write(doc_id, lease_token)
+                           if lease_token is not None else connect())
+            with transaction as db:
                 ids = [r["id"] for r in db.execute(
                     "SELECT id FROM chunks WHERE doc_id=?", (doc_id,))]
-            if not ids:
-                return 0
-            import faiss  # noqa: F401
-            index = _load()
-            removed = index.remove_ids(
-                np.array(ids, dtype=np.int64))
+                if not ids:
+                    return 0
+                removed = _load().remove_ids(np.array(ids, dtype=np.int64))
             _persist_locked()
             return int(removed)
-        return await asyncio.to_thread(_do)
+    return await asyncio.to_thread(_do)
 
 
 async def rebuild() -> dict:
     """重建按钮：从 SQLite BLOB 重放（零 API 费，兼压实）。"""
-    async with _lock:
-        def _do() -> dict:
+    def _do() -> dict:
+        with _lock:
             with connect() as db:
                 rows = db.execute(
                     "SELECT id, embedding FROM chunks"
@@ -137,7 +137,7 @@ async def rebuild() -> dict:
                                    [(int(i), int(i)) for i in ids])
             _persist_locked()
             return {"vectors": len(rows)}
-        return await asyncio.to_thread(_do)
+    return await asyncio.to_thread(_do)
 
 
 async def search(query_vec: list[float], top_k: int = 20) -> list[tuple[int, float]]:

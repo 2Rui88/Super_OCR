@@ -44,7 +44,7 @@ async def _heartbeat(job, lease_lost: asyncio.Event) -> None:
     while True:
         await asyncio.sleep(settings.heartbeat_seconds)
         try:
-            state = await asyncio.to_thread(queue.renew_lease, job.id, job.worker)
+            state = await asyncio.to_thread(queue.renew_lease, job.id, job.lease_token)
         except Exception:
             misses += 1
             if misses >= settings.lease_miss_tolerance:
@@ -71,26 +71,28 @@ async def _process(job) -> tuple[bool, str]:
 async def _run_job(job, slots: asyncio.Semaphore) -> None:
     lease_lost = asyncio.Event()
     heartbeat = asyncio.create_task(_heartbeat(job, lease_lost))
+    execute = asyncio.create_task(_process(job))
+    watcher = asyncio.create_task(lease_lost.wait())
     try:
-        execute = asyncio.create_task(_process(job))
-        watcher = asyncio.create_task(lease_lost.wait())
-        try:
-            await asyncio.wait({execute, watcher},
-                               return_when=asyncio.FIRST_COMPLETED)
-        finally:
-            watcher.cancel()
-            with contextlib.suppress(asyncio.CancelledError, Exception):
-                await watcher
+        await asyncio.wait({execute, watcher}, return_when=asyncio.FIRST_COMPLETED)
         if lease_lost.is_set() and not execute.done():
             execute.cancel()  # 止损：行已易主，继续跑只会重复烧 OCR/API
             log.warning("已取消止损：doc=%s worker=%s", job.id, job.worker)
-        with contextlib.suppress(asyncio.CancelledError, Exception):
-            await execute
+        await asyncio.gather(execute, return_exceptions=True)
+    except asyncio.CancelledError:
+        execute.cancel()
+        try:
+            await asyncio.to_thread(queue.release_lease, job.id, job.lease_token)
+        except Exception:
+            log.exception("归还任务失败，将由超时回收处理：doc=%s", job.id)
+        raise
     finally:
-        heartbeat.cancel()  # 心跳与执行同生共死
-        with contextlib.suppress(asyncio.CancelledError, Exception):
-            await heartbeat
-        slots.release()  # 无论成败/丢租约必还槽，槽位永不泄漏
+        heartbeat.cancel()
+        watcher.cancel()
+        try:
+            await asyncio.gather(execute, watcher, heartbeat, return_exceptions=True)
+        finally:
+            slots.release()
 
 
 async def _run_loop() -> None:
@@ -106,8 +108,20 @@ async def _run_loop() -> None:
                     log.warning("回收 %d 个无心跳任务", reclaimed)
                 next_reclaim = now + settings.reclaim_interval_seconds
             await slots.acquire()
+            claim = asyncio.create_task(asyncio.to_thread(queue.claim_next, worker_id()))
             try:
-                job = await asyncio.to_thread(queue.claim_next, worker_id())
+                job = await asyncio.shield(claim)
+            except asyncio.CancelledError:
+                # SQLite 领单可能已在线程里提交。停机时取回结果并归还。
+                try:
+                    job = await claim
+                    if job is not None:
+                        await asyncio.to_thread(queue.release_lease, job.id, job.lease_token)
+                except Exception:
+                    log.exception("停机时领单或归还失败，将由超时回收处理")
+                finally:
+                    slots.release()
+                raise
             except Exception:
                 slots.release()
                 raise
@@ -134,7 +148,7 @@ def start_worker() -> None:
 
 
 async def stop_worker() -> None:
-    """优雅停止：最多等 5 秒在途任务，等不完交给超时回收兜底。"""
+    """先停止领单，给予在途任务收尾时间，再取消并归还未完成的任务。"""
     global _worker_task
     if _worker_task is None:
         return
@@ -145,5 +159,8 @@ async def stop_worker() -> None:
     if _inflight:
         _, pending = await asyncio.wait(_inflight, timeout=settings.drain_timeout_seconds)
         if pending:
-            log.warning("停机时 %d 个任务仍在途（交给超时回收兜底）", len(pending))
+            log.info("停机归还 %d 个在途任务", len(pending))
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*pending, return_exceptions=True)
         _inflight.clear()

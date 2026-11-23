@@ -11,9 +11,8 @@ import logging
 import re
 from pathlib import Path
 
-from app import llm
+from app import llm, queue
 from app.config import settings
-from app.db import connect
 
 log = logging.getLogger("kb.figures")
 
@@ -58,12 +57,12 @@ def _cross_check_ok(vl_desc: str, linear_text: str) -> bool:
     return hits >= max(1, len(candidates) // 2)
 
 
-async def process_doc_figures(doc_id: int, pdf_path: str | None) -> dict:
+async def process_doc_figures(doc_id: int, lease_token: str, pdf_path: str | None) -> dict:
     """裁图 + VL 描述 + 交叉校验。无密钥/无 PDF/无图块时安全跳过。"""
     stats = {"figures": 0, "cropped": 0, "described": 0, "degraded": 0}
     if not pdf_path or not Path(pdf_path).exists():
         return stats
-    with connect() as db:
+    with queue.lease_write(doc_id, lease_token) as db:
         rows = db.execute(
             "SELECT id, page_num, bbox, linear_text FROM chunks"
             " WHERE doc_id=? AND type='figure'", (doc_id,)).fetchall()
@@ -80,7 +79,7 @@ async def process_doc_figures(doc_id: int, pdf_path: str | None) -> dict:
         except Exception:
             log.exception("裁图失败 chunk=%s", row["id"])
             continue
-        with connect() as db:
+        with queue.lease_write(doc_id, lease_token) as db:
             db.execute("UPDATE chunks SET crop_path=? WHERE id=?",
                        (str(out_png), row["id"]))
         if not llm.available():
@@ -92,7 +91,7 @@ async def process_doc_figures(doc_id: int, pdf_path: str | None) -> dict:
             stats["degraded"] += 1
             continue
         if _cross_check_ok(desc, row["linear_text"] or ""):  # 锚=OCR 文字（pack 已兜底块 text）
-            with connect() as db:
+            with queue.lease_write(doc_id, lease_token) as db:
                 db.execute("UPDATE chunks SET vl_desc=?,"
                            " seek_text=seek_text || ? WHERE id=?",
                            (desc, "\n" + desc, row["id"]))
