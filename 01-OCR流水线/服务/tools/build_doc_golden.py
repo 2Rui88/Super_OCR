@@ -1,45 +1,38 @@
-"""装配两份扫描件的 golden JSON（转写来源：GLM 视觉模型逐页转写）。
+"""用本地视觉转写文件生成文档评测基准。
 
-评测前说明：golden 由 AI 视觉转写生成（provenance=ai_vision_transcript），
-非人工逐字校对；用于量化扫描 OCR 的相对质量，不宣称绝对真值。
-印章文档第 2 页用印审批表为视觉转写的表格结构。
+输入是按页排列的 JSON 数组，每页包含 text 和 tables。
+可用 --out 将生成结果保存到仓库之外。
 """
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parents[2] / "资料/扫描文档/golden"
 
-QM_PAGES = [
-    {"text": "澄川建筑工程设计集团有限公司\n\n质量手册\n\nQM-2025\n\n（第一版）\n\n编制：质量管理部\n审核：总工程师\n批准：总经理\n2025 年 1 月 10 日发布 2025 年 1 月 20 日实施\n", "tables": []},
-    {"text": "目录\n\n1 总则 ………………………………………………… 3\n2 术语和定义 ………………………………………… 3\n3 质量管理体系 ……………………………………… 4\n4 管理职责 ……………………………………… 5\n5 资源管理 ……………………………………… 6\n6 产品实现 ……………………………………… 7\n7 测量、分析和改进 ………………………………… 8\n", "tables": []},
-    {"text": "1 总则\n\n1.1 目的\n\n为确立集团质量管理体系，明确质量方针和质量目标，依据 GB/T 19001-2016 标准，制定本手册。\n\n1.2 适用范围\n\n本手册适用于集团总部及各设计院、分公司与工程质量相关的质量管理活动。\n\n2 术语和定义\n\n本手册采用 GB/T 19001-2016 的术语和定义。\n", "tables": []},
-    {"text": "3 质量管理体系\n\n3.1 总要求\n\n集团按 GB/T 19001-2016 标准要求建立质量管理体系，形成文件并加以实施和保持，且持续改进其有效性。\n\n3.2 文件要求\n\n质量管理体系文件包括：质量手册、程序文件、作业指导书、质量记录。\n\n3.3 体系组织架构\n\n集团质量管理体系组织架构如下表：\n", "tables": [["层级", "部门", "职责"], ["决策层", "总经理办公会", "质量方针与目标审批"], ["管理层", "质量管理部", "体系运行与监督"], ["执行层", "各设计院、分公司", "工程质量执行"]]},
-    {"text": "4 管理职责\n\n4.1 管理承诺\n\n总经理应对质量管理体系的建立、实施和持续改进作出承诺，并确保：\n\n（一）向集团全体员工传达满足顾客和法律法规要求的重要性；\n\n（二）制定质量方针和质量目标；\n\n（三）主持管理评审；\n\n（四）确保资源的获得。\n\n4.2 质量方针\n\n精心设计、诚信服务、持续改进、顾客满意。\n", "tables": []},
-    {"text": "5 资源管理\n\n5.1 资源提供\n\n集团应确定并提供体系运行、产品实现和改进所需的资源。\n\n5.2 人力资源\n\n集团人力资源配置要求如下表：\n", "tables": [["岗位", "学历要求", "资格要求"], ["项目负责人", "本科及以上", "注册建造师"], ["专业负责人", "本科及以上", "中级及以上职称"], ["设计人员", "大专及以上", "初级及以上职称"]]},
-    {"text": "6 产品实现\n\n6.1 产品实现的策划\n\n集团对工程设计和工程管理活动进行策划，确定以下内容：质量目标和要求、过程、文件和资源、验证和验收准则、记录。\n\n6.2 与顾客有关的过程\n\n6.2.1 顾客要求的识别\n\n集团应识别顾客规定的要求和期望。\n\n6.2.2 顾客要求的评审\n\n合同签订前应评审顾客要求，评审结果及后续措施应形成记录。\n\n6.3 采购\n\n采购产品分类及审批方式如下表：\n", "tables": [["类别", "采购产品", "审批方式"], ["A 类", "设计软件", "部门负责人审批"], ["B 类", "检测设备", "总经理审批"], ["C 类", "办公用品", "授权采购"]]},
-    {"text": "7 测量、分析和改进\n\n7.1 总则\n\n集团应策划并实施测量、分析、改进过程，以证实质量管理体系的符合性和有效性。\n\n7.2 顾客满意\n\n集团应对顾客满意程度进行监视，作为质量管理体系绩效的测量手段。\n\n7.3 内部审核\n\n内部审核每年不少于一次，审核结果向总经理报告。\n\n7.4 改进\n\n集团应利用质量方针、质量目标、审核结果、数据分析，持续改进质量管理体系的有效性。\n", "tables": []},
-]
+def main() -> None:
+    parser = argparse.ArgumentParser(description="生成文档 OCR 评测基准")
+    parser.add_argument("--file", required=True, help="源文档名称")
+    parser.add_argument("--pages", type=Path, required=True, help="本地逐页转写 JSON")
+    parser.add_argument("--out", type=Path, required=True, help="评测基准 JSON 的输出路径")
+    args = parser.parse_args()
 
-SEAL_PAGES = [
-    {"text": "澄川建筑工程设计集团有限公司文件\n\n澄设办〔2021〕3号\n\n关于印发《印章使用管理规定（2021）》的通知\n\n集团各部门、各设计院、分公司：\n\n《印章使用管理规定（2021）》已经集团总裁办公会审议通过，现印发给你们，请认真遵照执行。\n\n澄川建筑工程设计集团有限公司\n2021年3月1日\n", "tables": []},
-    {"text": "印章使用管理规定（2021）\n\n第一条 为规范集团印章管理，明确印章使用审批流程，防范风险，制定本规定。\n\n第二条 集团办公室是印章归口管理部门，负责印章的制发、保管、使用登记和缴销。\n\n第三条 本规定适用于集团总部及各设计院、分公司的下列印章：（一）公章；（二）财务专用章；（三）合同专用章；（四）法定代表人名章；（五）发票专用章。\n\n第四条 印章的制发由集团办公室统一办理，任何部门不得私自刻制印章。\n\n第五条 印章保管人应当妥善保管印章，建立台账。印章保管人离岗、离职交接时，必须办理印章移交手续，集团办公室监交。\n\n第六条 用印审批权限按下列表格执行：\n", "tables": [["用印事项", "审批人"], ["一般文件、证明", "部门负责人"], ["合同、协议", "总经理"], ["对外担保、大额资金", "董事长"]]},
-    {"text": "第七条 用印应当填写《用印审批单》，写明用印事由、次数、时间。\n\n第八条 用印应当留存用印文件复印件，保存期限五年。\n\n第九条 严禁在空白纸张上加盖印章。严禁将印章携带外出；确需外带，须经董事长批准，并由专人陪同。\n\n第十条 印章专用于集团业务，不得将印章交由他人代管。\n\n第十一条 违反本规定造成损失的，依照集团相关规定追究责任；涉嫌违法犯罪的，移送司法机关。\n\n第十二条 本规定由集团办公室负责解释。\n\n第十三条 本规定自 2021 年 4 月 1 日起施行。\n", "tables": []},
-    {"text": "澄川建筑工程设计集团有限公司\n澄设发〔2021〕12 号\n\n关于调整差旅费住宿报销标准的通知\n\n集团财务部：\n\n经 2021 年 3 月 15 日总裁办公会研究决定，现将差旅费住宿报销标准调整如下：\n\n一、一类城市住宿费标准由每人每天 520 元调整为 580 元。\n\n二、二类城市住宿费标准由每人每天 440 元调整为 480 元。\n\n三、三类城市住宿费标准由每人每天 380 元保持不变。\n\n四、本通知自 2021 年 4 月 1 日起执行。\n\n差旅费管理办法（2021 版）中有关规定与本通知不一致的，以本通知为准。\n\n澄川建筑工程设计集团有限公司\n2021 年 3 月 18 日\n", "tables": []},
-]
+    pages = json.loads(args.pages.read_text(encoding="utf-8-sig"))
+    if not isinstance(pages, list) or not pages or any(not isinstance(page, dict) for page in pages):
+        parser.error("--pages 必须是非空的 JSON 页面对象数组")
 
-
-def _build(filename: str, pages: list[dict], mode: str = "ocr") -> None:
-    golden = {"file": filename, "provenance": "ai_vision_transcript",
-              "pages": [{"page_num": index + 1, "mode": mode, **page}
-                        for index, page in enumerate(pages)]}
-    out = OUT / f"{filename}.json"
-    out.write_text(json.dumps(golden, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"{out.name}: {len(pages)} 页，表格 {[len(p['tables']) for p in pages]}")
+    golden = {
+        "file": args.file,
+        "provenance": "ai_vision_transcript",
+        "pages": [
+            {"page_num": index, "mode": "ocr", **page}
+            for index, page in enumerate(pages, start=1)
+        ],
+    }
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(golden, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"{args.out.name}: {len(pages)} 页")
 
 
 if __name__ == "__main__":
-    OUT.mkdir(parents=True, exist_ok=True)
-    _build("质量手册 QM-2025（扫描）", QM_PAGES)
-    _build("印章管理规定2021（盖章扫描件）", SEAL_PAGES)
+    main()
