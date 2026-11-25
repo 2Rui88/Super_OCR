@@ -12,7 +12,6 @@
 noise 噪点 / glare 反光 / uneven 光照不均 / watermark 水印 / wrap 地址换行 /
 bad_number 号码校验位错误 / bad_date 日期非法 / bad_period 有效期倒挂 / long_term 长期。
 生成后用 app.certs.validators 自检：合法号码必须通过；故意错的仅 USCC/日期仍会被抓
-（身份证校验位规则已取消，bad_number 的身份证号只是数据层面"错"，不再判失败）。
 """
 from __future__ import annotations
 
@@ -79,8 +78,7 @@ def make_id_number(rng: random.Random, birth: date, gender: str,
     if broken:
         wrong = next(c for c in _ID_CHECK if c != check)
         number = first17 + wrong
-        # 校验位规则已取消：broken 号码结构合法即通过，仅作为评测"漏检"样例保留
-        assert validate_chinese_id(number)[0], number
+        assert not validate_chinese_id(number)[0], number
         return number
     number = first17 + check
     assert validate_chinese_id(number)[0], number
