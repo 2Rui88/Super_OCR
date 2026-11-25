@@ -27,8 +27,8 @@ def _field(message: dict, name: str, default):
     return value if value is not None else default
 
 
-def _compact_turn(turn: list[dict]) -> list[dict]:
-    """一轮 → 两条消息（问 + 带查阅摘要的答）；不完整轮返回空。"""
+def _compact_turn(turn: list[dict], *, direct_reply: bool) -> list[dict]:
+    """一轮 → 两条消息；直答历史省略依据和查阅轨迹。"""
     last = turn[-1]
     if (last.get("role") != "assistant" or last.get("incomplete")
             or not last.get("content") or _field(last, "tool_calls", [])):
@@ -44,14 +44,23 @@ def _compact_turn(turn: list[dict]) -> list[dict]:
             function = calls.pop(message.get("tool_call_id"), None)
             if function is None:
                 return []
-            args = _field(function, "arguments", {})
-            result = _field(message, "content", {})
-            target = args.get("query") or args.get("chunk_id") or ""
-            count = result.get("count") if isinstance(result, dict) else None
-            outcome = f"{count}块" if count is not None else "已返回"
-            summaries.append(f"调 {function['name']}({str(target)[:80]}) → {outcome}")
+            if not direct_reply:
+                args = _field(function, "arguments", {})
+                result = _field(message, "content", {})
+                target = args.get("query") or args.get("chunk_id") or ""
+                count = result.get("count") if isinstance(result, dict) else None
+                outcome = f"{count}块" if count is not None else "已返回"
+                summaries.append(f"调 {function['name']}({str(target)[:80]}) → {outcome}")
     if calls:
         return []
+    if direct_reply:
+        # 旧直答有时已把查阅摘要写进正文，不能只省略新拼接的摘要。
+        body = re.split(r"(?m)^[ \t]*(?:依据|查阅过程)[：:]", last["content"], maxsplit=1)[0]
+        answer = re.sub(r"\[\d+\]", "", body).strip()
+        if not answer:
+            return []
+        return [{"role": "user", "content": turn[0]["content"]},
+                {"role": "assistant", "content": answer}]
     citations = _field(last, "citations", None)
     if citations is None:
         citations = _field(last, "citations_json", [])
@@ -67,7 +76,7 @@ def _compact_turn(turn: list[dict]) -> list[dict]:
             {"role": "assistant", "content": answer}]
 
 
-def assemble(history: list[dict], question: str) -> list[dict]:
+def assemble(history: list[dict], question: str, *, direct_reply: bool = False) -> list[dict]:
     """全量落库历史 + 本问题 → LLM messages。"""
     turns: list[list[dict]] = []
     for message in history:
@@ -75,11 +84,13 @@ def assemble(history: list[dict], question: str) -> list[dict]:
             turns.append([])
         if turns:
             turns[-1].append(message)
-    compact = [turn for raw in turns if (turn := _compact_turn(raw))][-settings.agent_history_turns:]
+    compact = [turn for raw in turns
+               if (turn := _compact_turn(raw, direct_reply=direct_reply))][-settings.agent_history_turns:]
     while compact and sum(len(message["content"]) for turn in compact
                           for message in turn) > settings.agent_history_budget:
         compact.pop(0)
-    return [{"role": "system", "content": prompts.system_prompt()},
+    system_prompt = prompts.direct_reply_prompt() if direct_reply else prompts.system_prompt()
+    return [{"role": "system", "content": system_prompt},
             *(message for turn in compact for message in turn),
             {"role": "user", "content": question}]
 

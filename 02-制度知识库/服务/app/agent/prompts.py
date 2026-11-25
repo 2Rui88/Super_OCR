@@ -1,7 +1,6 @@
 """系统提示词组装器 —— 框架段(内核) + 业务注入段 + 能力清单(注册表自动生成)。
 
-内核不含任何业务措辞；业务包(agent_business)import 时调 register_section /
-register_refusal 完成注入。未注入任何业务段时引擎退化为通用对话。
+内核不含业务规则，由业务包注册查阅、拒答和直答提示。
 """
 from __future__ import annotations
 
@@ -16,6 +15,7 @@ FRAMEWORK_RULES = (
 
 _sections: list[str] = []
 _refusal: str | None = None
+_direct_reply: str | None = None
 
 
 def register_section(text: str) -> None:
@@ -34,11 +34,22 @@ def refusal() -> str | None:
     return _refusal
 
 
+def register_direct_reply(text: str) -> None:
+    """注册零工具调用时用于生成正式回复的提示。"""
+    global _direct_reply
+    _direct_reply = text
+
+
+def direct_reply_prompt() -> str:
+    return _direct_reply or "你是对话助手。请自然、简洁地回答用户。"
+
+
 def reset() -> None:
     """仅测试用：清空注入状态。"""
+    global _refusal, _direct_reply
     _sections.clear()
-    global _refusal
     _refusal = None
+    _direct_reply = None
 
 
 def system_prompt() -> str:

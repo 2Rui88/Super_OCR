@@ -16,6 +16,7 @@ from app import retrieval
 from app.agent import engine, store
 from app.agent_business import prompt_business, setup as business_setup
 from app.agent_business.citations import Citations
+from app.agent_business.monetary_answer import calculation_stream
 from app.config import settings
 from app.db import connect
 
@@ -96,10 +97,10 @@ async def ask(req: AskRequest):
                 history = await asyncio.to_thread(
                     store.load_history, conv_id,
                     before_id=user_id, include_tools=True)
-                registry = Citations()
+                registry = Citations(question)
                 finalize = prompt_business.make_finalize(registry)
                 async with aclosing(
-                        engine.run(question, history,
+                        engine.run(question, history, stream=calculation_stream(question, registry),
                                    tool_ctx=registry, finalize=finalize)) as events:
                     async for event in events:
                         kind = event["type"]

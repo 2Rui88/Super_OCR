@@ -33,6 +33,7 @@ copy .env.example .env                                        # 填 DASHSCOPE_AP
 打开 `http://127.0.0.1:8800/`（问答 / 文档库 / 评测三屏）。摄入队列内嵌于 API 进程，
 无需单独 worker 进程。
 
+可在 .env 中用 KB_VL_MODEL 指定图块识别模型，默认 qwen4-max。
 
 ## API 概览（`/api/v1`）
 

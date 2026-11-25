@@ -365,7 +365,8 @@ async def run_ingest(job: queue.ClaimedDoc) -> tuple[bool, str]:
         pages, tables, figure_count = await asyncio.to_thread(
             pack_chunks, job.id, job.lease_token, job.filename, p1_result)
         set_phase("图块加工")
-        await figures.process_doc_figures(job.id, job.lease_token, pdf_path)
+        figure_stats = await figures.process_doc_figures(job.id, job.lease_token, pdf_path)
+        figure_count += figure_stats["recovered"]
         set_phase("向量化上架")
         await embed_doc_chunks(job.id, job.lease_token, job.filename)
         await vector.add_chunks(job.id, job.lease_token)

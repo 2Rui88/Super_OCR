@@ -21,6 +21,7 @@ from app.agent import engine, store
 from app.agent_business import prompt_business
 from app.agent_business import setup as business_setup
 from app.agent_business.citations import Citations
+from app.agent_business.monetary_answer import calculation_stream
 from app.config import settings
 from app.db import connect
 
@@ -95,7 +96,7 @@ async def _run_agent(question: str) -> dict:
     """单题跑真实 Agent 链路（与 /qa/ask 同引擎同终局组装器），写会话历史。"""
     business_setup()
     conv_id, user_id = store.begin_turn(None, question)   # 评测同样写入历史
-    citations = Citations()
+    citations = Citations(question)
     finalize = prompt_business.make_finalize(citations)
     parts: list[str] = []
     citation_items: list[dict] = []
@@ -104,7 +105,7 @@ async def _run_agent(question: str) -> dict:
     tool_calls = 0
     error_code: str | None = None
     pending_args: dict[str, dict] = {}
-    async with aclosing(engine.run(question, [], tool_ctx=citations,
+    async with aclosing(engine.run(question, [], stream=calculation_stream(question, citations), tool_ctx=citations,
                                     finalize=finalize)) as events:
         async for ev in events:
             kind = ev["type"]

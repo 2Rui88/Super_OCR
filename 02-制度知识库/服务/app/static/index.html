@@ -378,40 +378,68 @@ async function openConv(id,retries=4){
 }
 
 /* ---------- 提问与 SSE ---------- */
-function mdInline(t){
-  return t.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
-          .replace(/`([^`]+)`/g,'<code>$1</code>');
+function mdInline(t,formatCitation){
+  return t.replace(/`([^`]+)`|\*\*([^*]+)\*\*|\[(\d+)\]/g,(match,code,bold,n)=>{
+    if(code!==undefined)return '<code>'+code+'</code>';
+    if(bold!==undefined)return '<strong>'+mdInline(bold,formatCitation)+'</strong>';
+    return formatCitation(match,n);
+  });
 }
-function mdToHtml(text){
+function mdToHtml(text,formatCitation){
   const lines=esc(text).split(String.fromCharCode(10));
-  const out=[];let list=null,table=null;
-  const flush=()=>{if(list){out.push('</'+list+'>');list=null;}
-                   if(table){out.push('</tbody></table>');table=null;}};
+  const out=[],lists=[];
+  let table=false;
+  const closeList=()=>out.push('</li></'+lists.pop().tag+'>');
+  const closeLists=()=>{while(lists.length)closeList();};
+  const closeTable=()=>{if(table){out.push('</table>');table=false;}};
+  const inline=t=>mdInline(t,formatCitation);
   for(const line of lines){
     const t=line.trim();
-    if(!t){flush();out.push('');continue;}
+    if(!t){closeTable();continue;}
     if(t.startsWith('|')&&t.endsWith('|')){
       const cells=t.slice(1,-1).split('|').map(c=>c.trim());
       if(cells.every(c=>/^:?-{2,}:?$/.test(c))){continue;}  // 分隔行
-      if(!table){flush();table=true;out.push('<table>');}
-      out.push('<tr>'+cells.map(c=>'<td>'+mdInline(c)+'</td>').join('')+'</tr>');
+      closeLists();
+      if(!table){table=true;out.push('<table>');}
+      out.push('<tr>'+cells.map(c=>'<td>'+inline(c)+'</td>').join('')+'</tr>');
       continue;
     }
-    if(table){out.push('</tbody></table>');table=null;}
+    closeTable();
     const ol=t.match(/^(\d+)[.、]\s+(.*)/),ul=t.match(/^[-*•]\s+(.*)/);
-    if(ol){if(list!=='ol'){flush();list='ol';out.push('<ol>');}out.push('<li>'+mdInline(ol[2])+'</li>');continue;}
-    if(ul){if(list!=='ul'){flush();list='ul';out.push('<ul>');}out.push('<li>'+mdInline(ul[1])+'</li>');continue;}
+    if(ol||ul){
+      const indent=line.match(/^[ \t]*/)[0].replace(/\t/g,'    ').length;
+      const tag=ol?'ol':'ul';
+      while(lists.length&&lists.at(-1).indent>indent)closeList();
+      const current=lists.at(-1);
+      if(current?.indent===indent&&current.tag!==tag)closeList();
+      if(lists.at(-1)?.indent===indent){
+        out.push('</li>');
+      }else{
+        const start=ol&&Number(ol[1])!==1?' start="'+ol[1]+'"':'';
+        out.push('<'+tag+start+'>');
+        lists.push({tag,indent});
+      }
+      out.push('<li>'+inline(ol?ol[2]:ul[1]));
+      continue;
+    }
+    closeLists();
     const h=t.match(/^#{1,4}\s+(.*)/);
-    if(h){flush();out.push('<h4>'+mdInline(h[1])+'</h4>');continue;}
-    flush();out.push('<p>'+mdInline(t)+'</p>');
+    out.push(h?'<h4>'+inline(h[1])+'</h4>':'<p>'+inline(t)+'</p>');
   }
-  flush();
-  return out.filter(x=>x!=='').join('');
+  closeLists();
+  closeTable();
+  return out.join('');
 }
 function renderCites(text,cites){
-  return mdToHtml(text).replace(/\[(\d+)\]/g,(match,n)=>{
-    const c=(cites||[]).find(item=>item.n===Number(n));
-    return c?`<button type="button" class="cite" title="${esc(c.label)}" onclick="showChunk(${Number(c.chunk_id)})">[${n}]</button>`:match;
+  const sources=new Map((cites||[]).map(c=>[c.n,c]));
+  const displayNumbers=new Map();
+  return mdToHtml(text,(match,n)=>{
+    const source=sources.get(Number(n));
+    if(!source)return match;
+    const chunkId=Number(source.chunk_id);
+    if(!displayNumbers.has(chunkId))displayNumbers.set(chunkId,displayNumbers.size+1);
+    const displayNumber=displayNumbers.get(chunkId);
+    return `<button type="button" class="cite" title="${esc(source.label)}" onclick="showChunk(${chunkId})">[${displayNumber}]</button>`;
   });
 }
 function createTurn(box,question){
@@ -479,7 +507,7 @@ async function ask(){
   if(!box.querySelector('.msg'))box.replaceChildren();
   checkWelcome();
   const turn=createTurn(box,q);
-  turn.status.textContent='正在查阅制度…';
+  turn.status.textContent='正在处理…';
   box.scrollTop=box.scrollHeight;
   let citations=[],text='',finished=false;
   try{
@@ -499,6 +527,7 @@ async function ask(){
         const ev=JSON.parse(part.slice(6));
         if(ev.conversation_id&&ev.conversation_id!==convId)selectConversation(ev.conversation_id);
         if(ev.type==='tool_call'){
+          turn.status.textContent='正在查阅制度…';
           addToolCall(turn,ev.id,ev.name,ev.args);
           turn.trace.open=true;
         }else if(ev.type==='tool_result'){
@@ -507,6 +536,7 @@ async function ask(){
           citations=ev.items;
           turn.status.textContent='正在生成回答…';
         }else if(ev.type==='delta'){
+          turn.status.textContent='正在生成回答…';
           text+=ev.text;
           turn.answer.innerHTML=renderCites(text,citations);
         }else if(ev.type==='refuse'){

@@ -180,14 +180,29 @@ async def _native_request(client: httpx.AsyncClient, url: str, payload: dict) ->
 
 
 async def vl_describe(image_path: str | Path, prompt: str) -> str:
-    """流程图结构描述（A6 唯一 VL 用途）。原生 multimodal-generation，图片走 base64。"""
+    """使用配置的视觉模型识别整张图，图片以 base64 传输。"""
     if not available():
         raise LLMUnavailable("未配置 DASHSCOPE_API_KEY")
     b64 = base64.b64encode(Path(image_path).read_bytes()).decode()
+    image = f"data:image/png;base64,{b64}"
+    if settings.vl_model == "qwen4-max" or settings.vl_model.startswith("qwen4-max-"):
+        async with httpx.AsyncClient(timeout=120) as client:
+            result = await _request(client, "POST", f"{_BASE}/chat/completions", {
+                "model": settings.vl_model,
+                "messages": [{"role": "user", "content": [
+                    {"type": "image_url", "image_url": {"url": image, "detail": "high"}},
+                    {"type": "text", "text": prompt},
+                ]}],
+                "temperature": 0.1,
+                "enable_thinking": False,
+                "vl_high_resolution_images": True,
+                "max_completion_tokens": 8192,
+            })
+        return result["choices"][0]["message"].get("content") or ""
     body = {
         "model": settings.vl_model,
         "input": {"messages": [{"role": "user", "content": [
-            {"image": f"data:image/png;base64,{b64}"},
+            {"image": image},
             {"text": prompt},
         ]}]},
     }

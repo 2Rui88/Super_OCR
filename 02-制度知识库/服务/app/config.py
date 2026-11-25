@@ -83,7 +83,7 @@ class Settings:
             "KB_EMBED_MODEL", "tongyi-embedding-vision-flash-2026-03-06")
         self.embed_dim: int = int(os.environ.get("KB_EMBED_DIM", "768"))
         self.chat_model: str = os.environ.get("KB_CHAT_MODEL", "qwen3.5-flash")
-        self.vl_model: str = os.environ.get("KB_VL_MODEL", "qwen3.8-omni-flash")
+        self.vl_model: str = os.environ.get("KB_VL_MODEL", "qwen4-max")
         # 拒答阈值：通义 embedding 相似度整体偏高（无关 0.74~0.78 / 相关 0.83+），
         # 0.55 是 OpenAI 系分布的经验值，本模型按实测分布取 0.80
         self.reject_threshold: float = float(os.environ.get("KB_REJECT_THRESHOLD", "0.80"))

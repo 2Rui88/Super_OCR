@@ -1,9 +1,10 @@
 """ReAct 循环引擎（内核）—— 查阅循环 + 终局生成，零业务依赖。
 
 run() 是纯异步生成器：只产出事件，不落库、不碰 HTTP；路由层翻译成 SSE，
-评测层直接消费。业务经三个注入口进入：
+评测层直接消费。业务经以下注入口进入：
   registry.register()   注册工具（能力清单随之同步）
   prompts.register_*()  注入提示词段 / 拒答话术
+  register_no_lookup_policy()  零查阅时的分类器与补查工具
   run(tool_ctx=, finalize=)  工具上下文对象 + 终局组装器
 全部缺省时引擎退化为纯流式对话（内核自验证形态）。
 """
@@ -15,13 +16,25 @@ import re
 import logging
 import sys
 from contextlib import aclosing
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
+from uuid import uuid4
 
 from app import llm
 from app.agent import context, events, prompts, registry
 from app.config import settings
 
 log = logging.getLogger("kb.agent")
+_NO_LOOKUP_DECISION_SECONDS = 8
+_NoLookupClassifier = Callable[[list[dict]], Awaitable[tuple[bool, str | None]]]
+_no_lookup_policy: tuple[str, _NoLookupClassifier] | None = None
+
+
+def register_no_lookup_policy(search_tool: str, classify: _NoLookupClassifier) -> None:
+    """业务分类器返回（允许直答、可选检索词）。"""
+    global _no_lookup_policy
+    if search_tool not in registry.TOOLS:
+        raise ValueError("补查工具必须先注册。")
+    _no_lookup_policy = (search_tool, classify)
 
 # asyncio.timeout_at 是 3.11+ API；服务器为 3.10，用等价实现兜底（接口含 expired()）
 if sys.version_info >= (3, 11):
@@ -67,11 +80,37 @@ class _IncompleteResponse(ValueError):
     pass
 
 
+def _tool_call(name: str, args: dict, call_id: str) -> tuple[dict, dict]:
+    spec = registry.TOOLS.get(name)
+    sanitized = spec.arguments(args) if spec else {}
+    return ({"id": call_id, "type": "function",
+             "function": {"name": name, "arguments": context.encode(sanitized)}},
+            sanitized)
+
+
+async def _fallback_call(
+    policy: tuple[str, _NoLookupClassifier], messages: list[dict], deadline: float
+) -> tuple[dict, dict] | None:
+    name, classify = policy
+    query = None
+    try:
+        now = asyncio.get_running_loop().time()
+        async with _timeout_at(min(now + _NO_LOOKUP_DECISION_SECONDS, deadline)):
+            direct_reply, query = await classify(messages)
+        if direct_reply:
+            return None
+    except TimeoutError:
+        log.warning("零查阅意图判断超时，使用原问题补查")
+    except Exception:
+        log.exception("零查阅意图判断失败，使用原问题补查")
+    return _tool_call(name, {"query": query or messages[-1]["content"]},
+                      f"call-{uuid4().hex}")
+
+
 async def _plan(stream, messages: list[dict]) -> tuple[list[tuple[dict, dict]], str]:
     """流式收集模型本轮的工具调用与本轮文本。
 
-    返回 (工具调用列表, 本轮文本)。零工具调用时的文本供直答路径使用
-    （闲聊：模型不调工具直接输出回答）；与工具调用同轮的文本维持原行为（前言）。
+    返回 (工具调用列表, 本轮文本)。未配置零查阅策略时，文本用于兼容旧直答路径。
     分片宽容拼装（qwen 流式实测行为）：index 允许跳号、id 允许只在首片出现、
     arguments 允许空串；完整性以"名称非空 + 参数可解析"为准。
     """
@@ -118,12 +157,7 @@ async def _plan(stream, messages: list[dict]) -> tuple[list[tuple[dict, dict]], 
         if not name or not isinstance(args, dict):
             raise _IncompleteResponse("模型返回的工具调用不完整。")
         call_id = part["id"] or f"call-{name}-{seq}"
-        spec = registry.TOOLS.get(name)
-        sanitized = spec.arguments(args) if spec else {}
-        calls.append(({"id": call_id, "type": "function",
-                       "function": {"name": name,
-                                    "arguments": context.encode(sanitized)}},
-                      sanitized))
+        calls.append(_tool_call(name, args, call_id))
     return calls, "".join(text_parts)
 
 
@@ -183,36 +217,56 @@ async def run(question: str, history: list[dict] | None = None, *, stream=None,
     lookup_deadline = min(started + settings.agent_lookup_timeout, deadline)
     rounds: list[list[dict]] = []
     count = 0
+    policy = _no_lookup_policy
+    looked_up = False
     try:
         messages = context.assemble(history or [], question)
-        for round_number in range(1, settings.agent_max_rounds + 1):
+        max_rounds = settings.agent_max_rounds
+        for round_number in range(1, max_rounds + 2):
             if clock() >= lookup_deadline:
                 break
-            yield {"type": events.THINKING, "round": round_number}
-            lookup = _timeout_at(lookup_deadline)
-            try:
-                async with lookup:
-                    calls, plan_text = await _plan(
-                        stream, messages + [m for group in rounds for m in group])
-            except TimeoutError:
-                if not lookup.expired():
-                    raise
+            if round_number <= max_rounds:
+                yield {"type": events.THINKING, "round": round_number}
+                lookup = _timeout_at(lookup_deadline)
+                try:
+                    async with lookup:
+                        calls, plan_text = await _plan(
+                            stream, messages + [m for group in rounds for m in group])
+                except TimeoutError:
+                    if not lookup.expired():
+                        raise
+                    break
+            elif policy and not looked_up:
+                calls, plan_text = [], ""
+            else:
                 break
+
+            fallback = False
             if not calls:
                 direct = plan_text.strip()
-                if not count and direct and not direct.startswith("查阅完成"):
-                    # 直答路径（闲聊/问候）：全程零工具调用，模型文本即最终回答，
-                    # 跳过终局组装与引用；拒答话术检测同样生效保持出口统一
+                direct_messages = None
+                if policy and not looked_up:
+                    direct_messages = context.assemble(history or [], question, direct_reply=True)
+                    call = await _fallback_call(policy, direct_messages, lookup_deadline)
+                    if call is not None:
+                        calls = [call]
+                        fallback = True
+                elif policy is None and not count and direct and not direct.startswith("查阅完成"):
+                    direct_messages = context.assemble(history or [], question, direct_reply=True)
+                else:
+                    break
+                if not calls:
                     refusal = prompts.refusal()
-                    if refusal and direct.rstrip("。.!！") == refusal:
+                    if policy is None and refusal and direct.rstrip("。.!！") == refusal:
                         yield {"type": events.REFUSE, "message": refusal}
                     else:
-                        yield {"type": events.DELTA, "text": direct}
+                        async with aclosing(_answer(stream, direct_messages, deadline)) as answer:
+                            async for event in answer:
+                                yield event
                     yield {"type": events.DONE,
                            "duration_ms": int((clock() - started) * 1000),
-                           "tool_calls": 0}
+                           "tool_calls": count}
                     return
-                break  # 已调过工具→「查阅完成」；或空响应→ 终局（空资料拒答兜底）
             results = []
             assistant = {"role": "assistant", "content": None,
                          "tool_calls": [call for call, _ in calls]}
@@ -232,17 +286,33 @@ async def run(question: str, history: list[dict] | None = None, *, stream=None,
                     if not lookup.expired():
                         raise
                     break
+                except Exception:
+                    if not fallback:
+                        raise
+                    log.exception("补查工具执行失败")
+                    yield {"type": events.ERROR, "code": "lookup_failed",
+                           "message": "本次查阅未完成，请重试。"}
+                    return
                 results.append(result)
+                looked_up |= "count" in result and not result.get("message")
                 yield {"type": events.TOOL_RESULT, "id": call["id"], "name": name,
                        "count": result.get("count", 0),
                        "summary": result.get("message", ""), "result": result}
             if results:
                 completed = {**assistant, "tool_calls": assistant["tool_calls"][:len(results)]}
                 context.append_round(rounds, completed, results)
+            if fallback:
+                if not results:
+                    raise TimeoutError
+                if not looked_up:
+                    yield {"type": events.ERROR, "code": "lookup_failed",
+                           "message": "本次查阅未完成，请重试。"}
+                    return
+                break
             if len(results) < len(calls):
                 break  # 超时截断的半轮：不再进入下一轮查阅
 
-        if clock() >= deadline:
+        if clock() >= deadline or (policy and not looked_up):
             raise TimeoutError
         evidence = context.final_evidence(rounds)
         if finalize is None:

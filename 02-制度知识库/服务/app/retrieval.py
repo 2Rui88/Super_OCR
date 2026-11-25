@@ -27,7 +27,15 @@ TOP_K_PER_ROUTE = 20
 RRF_K = 60
 FINAL_K = 8
 MAX_FINAL_K = 10
-_SEARCHABLE = "d.status='ready' AND d.superseded_by IS NULL"
+_FIGURE_APPENDIX = re.compile(r"附录\s*([a-z])(?![a-z])", re.I)
+_FIGURE_TERMS = re.compile(r"流程图|泳道图|图注")
+_TABLE_TERMS = re.compile(r"流程(?:图)?节点说明|节点说明表|工作指引")
+_SEARCHABLE = (
+    "d.status='ready' AND d.superseded_by IS NULL"
+    " AND (c.type NOT IN ('table_full', 'table_row') OR NOT EXISTS ("
+    " SELECT 1 FROM chunks f WHERE f.doc_id=c.doc_id AND f.page_num=c.page_num"
+    " AND f.bbox=c.bbox AND f.type='figure' AND f.vl_desc LIKE '节点和岗位：%'))"
+)
 
 # 旧问答管线(改写点位/生成提示词/拒答闸门)已由 agent 引擎取代；
 # 本模块只保留检索能力本体，供 agent_business 工具层调用。
@@ -161,6 +169,30 @@ async def _global_vector_hits(query_vec: list[float]) -> list[tuple[int, float]]
         limit *= 2
 
 
+def _appendix_figure_ids(question: str, doc_id: int | None) -> list[int]:
+    """显式指向附录流程图时，用附录和已知文件定位原图块。"""
+    appendices = {match.upper() for match in _FIGURE_APPENDIX.findall(question)}
+    if len(appendices) != 1 or not _FIGURE_TERMS.search(question) or _TABLE_TERMS.search(question):
+        return []
+    if doc_id is None and "《" in question:
+        from app.agent_business.document_scope import preferred_document
+
+        doc_id = preferred_document(question)
+        if doc_id is None:
+            return []
+    appendix = next(iter(appendices))
+    with connect() as db:
+        rows = db.execute(
+            "SELECT c.id,c.doc_id,c.heading_path FROM chunks c JOIN documents d ON d.id=c.doc_id"
+            f" WHERE {_SEARCHABLE} AND c.type='figure' AND c.vl_desc<>''"
+            " AND (? IS NULL OR c.doc_id=?) ORDER BY c.page_num,c.id",
+            (doc_id, doc_id),
+        ).fetchall()
+    matched = [row for row in rows if (head := _FIGURE_APPENDIX.match(row["heading_path"].lstrip()))
+               and head.group(1).upper() == appendix]
+    return [row["id"] for row in matched] if len({row["doc_id"] for row in matched}) == 1 else []
+
+
 async def search(question: str, *, doc_id: int | None = None, top_k: int = FINAL_K) -> dict:
     """按范围检索，保留旧问答使用的拒答分数和结果字段。"""
     top_k = max(1, min(top_k, MAX_FINAL_K))
@@ -175,7 +207,10 @@ async def search(question: str, *, doc_id: int | None = None, top_k: int = FINAL
                 vector_hits = await asyncio.to_thread(_document_vector_hits, doc_id, vec)
         except Exception:
             log.warning("向量检索失败，仅关键词路", exc_info=True)
-    keyword_hits = await asyncio.to_thread(_keyword_ids, question, doc_id)
+    keyword_hits, appendix_hits = await asyncio.gather(
+        asyncio.to_thread(_keyword_ids, question, doc_id),
+        asyncio.to_thread(_appendix_figure_ids, question, doc_id),
+    )
 
     # RRF 融合
     rrf: dict[int, float] = {}
@@ -183,21 +218,21 @@ async def search(question: str, *, doc_id: int | None = None, top_k: int = FINAL
         rrf[cid] = rrf.get(cid, 0.0) + 1.0 / (RRF_K + rank)
     for rank, cid in enumerate(keyword_hits, 1):
         rrf[cid] = rrf.get(cid, 0.0) + 1.0 / (RRF_K + rank)
-    top_ids = sorted(rrf, key=rrf.get, reverse=True)
+    top_ids = list(dict.fromkeys([*appendix_hits, *sorted(rrf, key=rrf.get, reverse=True)]))
 
     # 拒答闸门：双路皆弱才拒
     vector_top1 = vector_hits[0][1] if vector_hits else 0.0
-    refuse = (vector_top1 < settings.reject_threshold) and (not keyword_hits)
+    refuse = vector_top1 < settings.reject_threshold and not (keyword_hits or appendix_hits)
 
     results = []
     if top_ids:
         marks = ",".join("?" * len(top_ids))
         with connect() as db:
             rows = db.execute(
-                f"SELECT c.id, c.doc_id, c.page_num, c.type, c.row_index, c.heading_path,"
+                f"SELECT c.id, c.doc_id, c.page_num, c.bbox, c.type, c.row_index, c.heading_path,"
                 f"       c.seek_text, c.html, c.crop_path, c.linear_text, c.vl_desc,"
                 f"       c.source_mode, c.ocr_confidence,"
-                f"       d.filename, d.superseded_by"
+                f"       d.filename, d.sha256, d.pdf_path, d.superseded_by"
                 f" FROM chunks c JOIN documents d ON d.id = c.doc_id"
                 f" WHERE c.id IN ({marks}) AND {_SEARCHABLE}", tuple(top_ids)).fetchall()
             by_id = {r["id"]: dict(r) for r in rows}
@@ -206,8 +241,9 @@ async def search(question: str, *, doc_id: int | None = None, top_k: int = FINAL
         for cid in top_ids:
             if cid in by_id:
                 item = by_id[cid]
-                item["rrf"] = round(rrf[cid], 6)
-                item["routes"] = ("向量+关键词" if cid in vector_ids and cid in keyword_ids
+                item["rrf"] = round(rrf.get(cid, 0.0), 6)
+                item["routes"] = ("附录标题" if cid in appendix_hits else
+                                  "向量+关键词" if cid in vector_ids and cid in keyword_ids
                                   else "向量" if cid in vector_ids else "关键词")
                 results.append(item)
                 if len(results) == top_k:
