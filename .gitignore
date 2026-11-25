@@ -2,4 +2,11 @@
 Thumbs.db
 ~$*
 **/.env
+**/.env.*
+!**/.env.example
 .zcode/
+
+# Local deployment diagnostics and generated reports
+/_deploy_tmp/
+/output/
+/tmp/

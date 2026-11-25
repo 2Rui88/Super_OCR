@@ -5,3 +5,8 @@ data/
 uploads/
 tests/_out/
 .env
+
+# Local document corrections and evaluation data
+/app/source_figure_corrections.json
+/tests/逐文件评测集.csv
+/tests/逐文件评测结果.csv
