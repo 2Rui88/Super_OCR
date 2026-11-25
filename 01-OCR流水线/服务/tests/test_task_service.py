@@ -220,6 +220,20 @@ class ImageRoutingTest(unittest.TestCase):
         self.assertEqual((page["source_mode"], page["blocks"][0]["text"]),
                          ("ocr", "文档文字"))
 
+    def test_other_document_titles_with_id_fields_fall_back(self):
+        for title in ("工作证", "员工入职登记表", "示例省居住证"):
+            with self.subTest(title=title):
+                lines = [
+                    (title, [0.20, 0.04, 0.80, 0.10]),
+                    ("姓名示例性别女民族汉", [0.10, 0.20, 0.65, 0.25]),
+                    ("出生日期1992年7月23日", [0.10, 0.26, 0.65, 0.31]),
+                    ("住址示例路18号", [0.10, 0.32, 0.65, 0.37]),
+                    ("公民身份号码99990119920723284X", [0.10, 0.38, 0.80, 0.43]),
+                ]
+                result = process_image(self._image(), card_engine=self._engine(lines),
+                                       document_reader=lambda img, n: [], registry=self.registry)
+                self.assertEqual((result["kind"], result["reason"]), ("document", FALLBACK_REASON))
+
     def test_hint_forces_card_path(self):
         image = self._image()
         engine = self._engine([("完全无关的文字", [0.1, 0.1, 0.5, 0.15])])
@@ -267,6 +281,39 @@ class ApiTest(unittest.TestCase):
         self.assertEqual((detail["status"], detail["engine_type"],
                           detail["result"]["kind"]), ("done", "card_ocr", "card"))
 
+    def test_recent_cards_includes_completed_batch_items(self):
+        def create(task_type, name, sha):
+            return self.store.create_task(task_type=task_type, filename=name,
+                                          file_sha256=sha, file_path=f"/uploads/{name}")
+
+        old = create("card", "older.jpg", "same-sha")
+        other = create("card", "single.jpg", "another-sha")
+        newest = create("card", "batch.jpg", "same-sha")
+        pdf = create("document_scan", "archive.pdf", "pdf-sha")
+        create("card", "queued.jpg", "queued-sha")
+        batch_id = self.store.create_batch([newest, pdf])
+        envelope = {"kind": "card", "result": {
+            "doc_type_cn": "身份证正面", "duration_ms": 123,
+            "fields": [{"name": "性别", "value": "", "needs_review": True}],
+        }}
+        for task_id in (old, other, newest, pdf):
+            self.store.finish_task(task_id, result_json=json.dumps(envelope), engine_type="card_ocr")
+
+        response = self.client.get("/api/v1/tasks/recent")
+        self.assertEqual(response.status_code, 200)
+        items = response.json()["items"]
+        self.assertEqual([item["id"] for item in items], [newest, other])
+        self.assertEqual(items[0]["batch_id"], batch_id)
+        self.assertEqual(items[0]["type_cn"], "身份证正面")
+        self.assertEqual(items[0]["issues"], 1)
+        self.assertEqual(items[0]["duration_ms"], 123)
+        self.assertNotIn("result_json", items[0])
+        self.assertNotIn("fields", items[0])
+        self.assertIsNone(items[1]["batch_id"])
+        limited = self.client.get("/api/v1/tasks/recent?limit=1").json()["items"]
+        self.assertEqual([item["id"] for item in limited], [newest])
+        self.assertEqual(self.client.get("/api/v1/tasks/recent?limit=51").status_code, 422)
+
     def test_card_sync_wait_returns_202_when_worker_absent(self):
         response = self.client.post("/api/v1/cards", files={
             "file": ("sample.jpg", _png_bytes(), "image/jpeg")})
@@ -289,6 +336,20 @@ class ApiTest(unittest.TestCase):
         response = self.client.post("/api/v1/cards", files={
             "file": ("notes.txt", b"hello", "text/plain")})
         self.assertEqual(response.status_code, 415)
+
+    def test_incomplete_jpeg_is_rejected_before_creating_single_task(self):
+        from PIL import Image
+
+        image = io.BytesIO()
+        Image.new("RGB", (128, 128), "navy").save(image, format="JPEG")
+        truncated = image.getvalue()[:-80]
+        with Image.open(io.BytesIO(truncated)) as header:
+            header.verify()
+        response = self.client.post("/api/v1/cards", files={
+            "file": ("incomplete.jpg", truncated, "image/jpeg")}, data={"wait": "false"})
+        self.assertEqual(response.status_code, 415)
+        self.assertIn("完整", response.json()["detail"]["message"])
+        self.assertIsNone(self.store.get_task(1))
 
     def test_oversized_upload_rejected_at_read_stage(self):
         # 限长读取：超过 20MB 上限在 read 阶段即 413，内容校验都不该走到

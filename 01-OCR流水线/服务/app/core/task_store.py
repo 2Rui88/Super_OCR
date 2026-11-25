@@ -226,6 +226,25 @@ class TaskStore:
             row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
         return dict(row) if row else None
 
+    def recent_card_tasks(self, limit: int) -> list[dict]:
+        """已完成的证件图片任务，同一原图只保留最近完成的一项。"""
+        with self._connect() as db:
+            rows = db.execute("""
+                WITH ranked AS (
+                    SELECT id, finished_at, ROW_NUMBER() OVER (
+                        PARTITION BY file_sha256 ORDER BY finished_at DESC, id DESC
+                    ) AS position
+                    FROM tasks
+                    WHERE task_type='card' AND status='done' AND result_json IS NOT NULL
+                )
+                SELECT t.id, t.filename, t.file_sha256, t.finished_at, t.result_json,
+                       (SELECT MAX(batch_id) FROM batch_items WHERE task_id=t.id) AS batch_id
+                FROM ranked JOIN tasks t ON t.id=ranked.id
+                WHERE ranked.position=1
+                ORDER BY ranked.finished_at DESC, ranked.id DESC LIMIT ?
+            """, (limit,)).fetchall()
+        return [dict(row) for row in rows]
+
     def requeue_task(self, task_id: int) -> bool:
         """把 failed 任务重新排回队列（retry_failed 用，只对 failed 生效）。"""
         with self._connect() as db:

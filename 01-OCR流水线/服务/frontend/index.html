@@ -132,7 +132,8 @@
         <div id="recentList"><div class="muted" style="font-size:12px">暂无记录</div></div>
       </div>
       <div class="card">
-        <h2>证件图（字段框叠加，点击字段行高亮）</h2>
+        <h2 id="certPreviewTitle">证件图（字段框叠加，点击字段行高亮）</h2>
+        <div id="certRejected" class="issues" role="alert" hidden></div>
         <div class="canvas-wrap" id="certWrap" style="display:none">
           <img id="imgCert" alt="证件预览"><canvas id="overlay"></canvas>
         </div>
@@ -141,7 +142,7 @@
         </div>
         <div id="certPlaceholder" class="muted">上传后在此显示</div>
       </div>
-      <div class="card">
+      <div class="card" id="certResultPanel">
         <h2 id="certTitle">字段</h2>
         <div id="certMeta" class="muted" style="font-size:12px;margin-bottom:8px"></div>
         <div id="certFields"></div>
@@ -234,13 +235,14 @@
       <div class="muted" id="bCertMeta" style="font-size:12px;margin:6px 0 8px"></div>
       <div class="row" style="align-items:flex-start">
         <div style="flex:1;min-width:0">
+          <div id="bCertRejected" class="issues" role="alert" hidden></div>
           <div class="canvas-wrap" id="bCertWrap" style="display:none">
             <img id="bImgCert" alt="证件预览"><canvas id="bOverlay"></canvas>
           </div>
           <div class="muted" id="bCertPlaceholder" style="font-size:12px">加载原图中…</div>
           <div style="margin-top:8px"><button class="ghost" id="bBtnRect" style="display:none">摆正视图（对齐字段框）</button></div>
         </div>
-        <div style="flex:1;min-width:0">
+        <div id="bCertResultPanel" style="flex:1;min-width:0">
           <div id="bCertFields"></div>
           <div id="bCertIssues"></div>
           <div style="margin-top:10px;display:flex;gap:8px">
@@ -390,6 +392,11 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const API = "/api/v1";
+// 部署时可设置证件演示批次的起点，原历史通过 ?history=all 回看。
+const CERTIFICATE_HISTORY_START = null;
+const certificateHistoryStart = new URLSearchParams(location.search).get("history") === "all"
+  ? null : CERTIFICATE_HISTORY_START;
+const CERTIFICATE_REQUIRED = "未识别为证件，请上传身份证、营业执照或驾驶证图片。";
 let toastTimer;
 function toast(msg, bad) {
   const t = $("toast");
@@ -397,6 +404,30 @@ function toast(msg, bad) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.display = "none", 2600);
 }
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function explainDateValidation(value) {
+  const text = value.replace(/\s+/g, "");
+  const parts = text.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/)
+    || text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/)
+    || text.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (!parts) return "日期格式不完整或有误，请核对原图";
+  const [year, month, day] = parts.slice(1).map(Number);
+  if (year < 1) return "日期不存在，年份必须大于 0";
+  if (month < 1 || month > 12) return "日期不存在，月份必须是 1 至 12";
+  if (day < 1) return "日期不存在，每月从 1 日开始";
+  const monthEnd = new Date(0);
+  monthEnd.setUTCFullYear(year, month, 0);
+  const days = monthEnd.getUTCDate();
+  if (day > days) return `日期不存在，${year}年${month}月只有${days}天`;
+  return "日期未通过校验，请核对原图";
+}
+function fieldReviewReason(field) {
+  if (!field.value?.trim()) return "未提取到值";
+  const errors = (field.validation?.errors || []).map(error => error.startsWith("无法解析为有效日期：")
+    ? explainDateValidation(field.value) : error);
+  if (errors.length) return `校验失败（${errors.join("；")}）`;
+  if (field.validation?.passed === false) return "校验失败";
+  return `置信度低（${field.confidence}）`;
+}
 function bjTime(iso) {  // 服务端存 UTC ISO → 北京时间显示
   if (!iso) return "—";
   const d = new Date(iso);
@@ -410,6 +441,10 @@ function bjTime(iso) {  // 服务端存 UTC ISO → 北京时间显示
 document.querySelectorAll("#nav button").forEach(btn => btn.onclick = () => {
   document.querySelectorAll("#nav button, .tab").forEach(el => el.classList.remove("on"));
   btn.classList.add("on"); $("tab-" + btn.dataset.tab).classList.add("on");
+  if (btn.dataset.tab === "recognize") refreshRecent();
+  if (btn.dataset.tab === "batch" && CERTIFICATE_HISTORY_START && !batchCur) {
+    pollBatch(CERTIFICATE_HISTORY_START.batchId).catch(error => toast(error.message, true));
+  }
 });
 function switchTab(name) { document.querySelector(`#nav button[data-tab=${name}]`).click(); }
 
@@ -450,8 +485,9 @@ wireDrop("dropCard", "fileCard", files => {
 });
 const DROP_CARD_HINT = "拖入证件图片，或点击选择（JPG/PNG/BMP/WebP ≤20MB）";
 $("btnRecognize").onclick = async () => {
+  const file = certFile;
   const form = new FormData();
-  form.append("file", certFile);
+  form.append("file", file);
   const type = $("certType").value; if (type) form.append("type", type);
   form.append("wait", "true");
   $("btnRecognize").disabled = true; $("btnRecognize").textContent = "识别中…";
@@ -467,19 +503,24 @@ $("btnRecognize").onclick = async () => {
     } else if (resp.status === 200) envelope = body;
     else { toast(body.detail?.message || `识别失败（${resp.status}）`, true); return; }
     const elapsed = (performance.now() - started) / 1000;
-    pushRecent(envelope, certFile, elapsed);
-    renderCert(envelope, URL.createObjectURL(certFile), elapsed);
+    pushRecent(envelope, file, elapsed, body.task_id);
+    renderCert(envelope, URL.createObjectURL(file), elapsed);
+    refreshRecent();
   } catch (e) { toast("请求失败：" + e.message, true); }
   $("btnRecognize").disabled = false; $("btnRecognize").textContent = "上传识别";
 };
 
-/* ---------- 最近上传历史（浏览器本地） ---------- */
+/* ---------- 最近识别 ---------- */
 const RECENT_KEY = "ocrRecentCards", RECENT_MAX = 20;
+let serverRecent = [], activeRecentItem = null, recentRefreshId = 0;
 function loadRecent() {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]"); } catch { return []; }
+  try {
+    const saved = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch { return []; }
 }
 function saveRecent(list) { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); }
-function pushRecent(envelope, file, elapsed) {
+function pushRecent(envelope, file, elapsed, taskId) {
   const r = envelope.result;
   const isCard = envelope.kind === "card";
   const entry = {
@@ -487,31 +528,78 @@ function pushRecent(envelope, file, elapsed) {
     name: file.name, kind: envelope.kind,
     typeCn: isCard ? r.doc_type_cn : "文档图片",
     issues: isCard ? r.fields.filter(f => f.needs_review).length : 0,
-    elapsed, ts: Date.now(), envelope,
+    elapsed, ts: Date.now(), envelope, taskId,
   };
   const list = loadRecent().filter(x => x.sha !== entry.sha);  // 同内容重识别：置顶更新
   list.unshift(entry);
   saveRecent(list.slice(0, RECENT_MAX));
-  renderRecent(entry.sha);
+  activeRecentItem = entry;
+  renderRecent();
 }
-function renderRecent(activeSha) {
-  const list = loadRecent();
-  $("recentList").innerHTML = list.length ? list.map(x => `
-    <div class="recent-item${x.sha === activeSha ? " on" : ""}" data-sha="${x.sha}">
+async function refreshRecent() {
+  const requestId = ++recentRefreshId;
+  try {
+    const response = await fetch(`${API}/tasks/recent?limit=${RECENT_MAX}`, {cache: "no-store"});
+    if (!response.ok) return;
+    const {items} = await response.json();
+    if (requestId !== recentRefreshId) return;
+    serverRecent = items.map(task => ({
+      sha: task.file_sha256,
+      ext: (task.filename.match(/\.(\w+)$/) || [])[1]?.toLowerCase() || "jpg",
+      name: task.filename, taskId: task.id, batchId: task.batch_id,
+      typeCn: task.type_cn, issues: task.issues,
+      elapsed: Number.isFinite(task.duration_ms) ? task.duration_ms / 1000 : null,
+      ts: Date.parse(task.finished_at) || 0,
+    }));
+    const latest = serverRecent.find(item => item.sha === activeRecentItem?.sha);
+    if (latest && latest.taskId !== activeRecentItem.taskId) openRecent(latest);
+    else renderRecent();
+  } catch {
+    // 暂时无法取得服务器记录时，仍可查看已有的历史。
+  }
+}
+function renderRecent() {
+  // 同一张原图优先使用服务器结果，避免本机保存的旧坐标覆盖新结果。
+  const byFile = new Map(serverRecent.map(entry => [entry.sha, entry]));
+  for (const entry of loadRecent()) {
+    if (!byFile.has(entry.sha)) byFile.set(entry.sha, entry);
+  }
+  const list = [...byFile.values()]
+    .filter(entry => !certificateHistoryStart || entry.taskId >= certificateHistoryStart.taskId)
+    .sort((a, b) => b.ts - a.ts).slice(0, RECENT_MAX);
+  $("recentList").innerHTML = list.length ? list.map(x => {
+    const rejected = x.kind === "document" || x.typeCn === "文档图片";
+    return `
+    <div class="recent-item${x.sha === activeRecentItem?.sha ? " on" : ""}" data-sha="${esc(x.sha)}">
       <div class="rname" title="${esc(x.name)}">${esc(x.name)}</div>
-      <div class="rmeta"><span class="rdot ${x.issues ? "warn" : "ok"}"></span>
-        ${esc(x.typeCn)}${x.issues ? ` · ${x.issues} 项待复核` : ""} · ${x.elapsed.toFixed(1)}s
+      <div class="rmeta"><span class="rdot ${rejected || x.issues ? "warn" : "ok"}"></span>
+        ${esc(rejected ? "未识别为证件" : x.typeCn)}${x.batchId ? ` · 批次 #${x.batchId}` : ""}${x.issues ? ` · ${x.issues} 项待复核` : ""}
+        ${Number.isFinite(x.elapsed) ? ` · ${x.elapsed.toFixed(1)}s` : ""}
         <span class="rarr">›</span></div>
-    </div>`).join("")
+    </div>`;
+  }).join("")
     : `<div class="muted" style="font-size:12px">暂无记录</div>`;
-  $("recentList").querySelectorAll(".recent-item").forEach(el => el.onclick = () => {
-    renderRecent(el.dataset.sha);
-    const item = loadRecent().find(x => x.sha === el.dataset.sha);
-    if (!item) return;
-    renderCert(item.envelope, `${API}/files/${item.sha}.${item.ext}`, item.elapsed);
-  });
+  $("recentList").querySelectorAll(".recent-item").forEach(el => el.onclick = () => openRecent(byFile.get(el.dataset.sha)));
+}
+async function openRecent(item) {
+  if (!item) return;
+  activeRecentItem = item;
+  renderRecent();
+  try {
+    let envelope = item.envelope;
+    if (!envelope) {
+      const response = await fetch(`${API}/tasks/${item.taskId}`);
+      if (!response.ok) throw new Error("识别结果暂不可用");
+      ({result: envelope} = await response.json());
+      if (!envelope) throw new Error("识别结果暂不可用");
+    }
+    if (activeRecentItem === item) renderCert(envelope, `${API}/files/${item.sha}.${item.ext}`, item.elapsed);
+  } catch (error) {
+    if (activeRecentItem === item) toast(error.message, true);
+  }
 }
 renderRecent();
+refreshRecent();
 
 async function pollTask(taskId, onProgress) {
   let delay = 1000, failures = 0;
@@ -578,11 +666,16 @@ function makeCertRenderer(ids) {
   };
 
   function render(envelope, imageUrl, elapsed) {
-    result = envelope;
+    const r = envelope.result;
+    const isCertificate = envelope.kind === "card" && r.doc_type !== "unknown";
+    result = isCertificate ? envelope : null;
     view.originalUrl = imageUrl;
-    view.rectUrl = (envelope.kind === "card" && envelope.result.rectified_file)
-      ? `${API}/files/${envelope.result.rectified_file}` : null;
+    view.rectUrl = isCertificate && r.rectified_file ? `${API}/files/${r.rectified_file}` : null;
     view.rectOn = false; view.active = null;
+    $(ids.resultPanel).hidden = !isCertificate;
+    $(ids.notice).hidden = isCertificate;
+    $(ids.notice).textContent = isCertificate ? "" : CERTIFICATE_REQUIRED;
+    if (ids.previewTitle) $(ids.previewTitle).textContent = isCertificate ? "证件图（字段框叠加，点击字段行高亮）" : "原图";
     $(ids.btnRect).style.display = view.rectUrl ? "inline-block" : "none";
     $(ids.img).onerror = () => {  // 历史回看时原件可能已清理：字段照常显示，仅图缺失
       $(ids.wrap).style.display = "none";
@@ -594,43 +687,43 @@ function makeCertRenderer(ids) {
       $(ids.wrap).style.display = "inline-block";
       redraw();
     };
-    $(ids.img).src = imageUrl;
     $(ids.placeholder).textContent = "加载原图中…"; $(ids.placeholder).style.display = "block";
+    $(ids.img).src = imageUrl;
+    $(ids.json).style.display = "none";
+    if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
 
-    const elapsedText = typeof elapsed === "number" ? ` · 用时 ${elapsed.toFixed(1)} 秒` : "";
-    if (envelope.kind !== "card") {  // 路由成文档
-      const text = (envelope.result.pages || []).map(p =>
-        p.blocks.map(b => b.text).join("\n")).join("\n\n");
-      $(ids.title).textContent = "识别结果（文档）";
-      $(ids.meta).innerHTML = `<span class="badge b-warn">${esc(envelope.reason)}</span>${elapsedText}`;
-      $(ids.fields).innerHTML = `<div class="docview">${esc(text)}</div>`;
-      $(ids.issues).innerHTML = "";
-    } else {
-      const r = envelope.result;
-      const bad = r.fields.filter(f => f.needs_review).length;
-      $(ids.title).textContent = `字段 · ${r.fields.length} 项${bad ? `，${bad} 项有问题` : ""}`;
-      $(ids.meta).innerHTML =
-        `${esc(r.doc_type_cn)}${elapsedText}` +
-        (r.doc_type === "unknown" ? ` <span class="badge b-err">未识别出证件类型</span>` : "");
-      $(ids.fields).innerHTML = `<table><thead><tr><th>字段</th><th>识别值</th><th>置信度</th><th>校验</th></tr></thead><tbody>` +
-        r.fields.map((f, i) => `<tr data-i="${i}">
-          <td>${esc(f.name)}</td><td>${esc(f.value)}</td><td>${f.confidence}</td>
-          <td>${f.needs_review ? `<span class="badge b-err">${esc(f.validation.errors.join("；") || "置信度低")}</span>`
-                               : `<span class="badge b-ok">通过</span>`}</td></tr>`).join("") +
-        `</tbody></table>`;
-      $(ids.fields).querySelectorAll("tbody tr").forEach(tr => tr.onclick = () => {
-        $(ids.fields).querySelectorAll("tr").forEach(x => x.classList.remove("hl"));
-        tr.classList.add("hl");
-        view.active = +tr.dataset.i;
-        // 字段框属于摆正图坐标系：点击字段行时自动切到摆正视图（若有）
-        if (view.rectUrl && !view.rectOn) { view.rectOn = true; applyView(); }
-        else redraw();
-      });
-      $(ids.issues).innerHTML = r.issues.length ? `<div class="issues">${r.issues.map(esc).join("<br>")}</div>` : "";
+    if (!isCertificate) {
+      $(ids.title).textContent = "原图";
+      for (const id of [ids.meta, ids.fields, ids.issues, ids.json]) $(id).textContent = "";
+      $(ids.download).removeAttribute("href");
+      $(ids.download).style.display = "none";
+      redraw();
+      refreshHealth();
+      return;
     }
+    const elapsedText = typeof elapsed === "number" ? ` · 用时 ${elapsed.toFixed(1)} 秒` : "";
+    const reviewFields = r.fields.filter(f => f.needs_review);
+    const bad = reviewFields.length;
+    $(ids.title).textContent = `字段 · ${r.fields.length} 项${bad ? `，${bad} 项有问题` : ""}`;
+    $(ids.meta).textContent = `${r.doc_type_cn}${elapsedText}`;
+    $(ids.fields).innerHTML = `<table><thead><tr><th>字段</th><th>识别值</th><th>置信度</th><th>状态</th></tr></thead><tbody>` +
+      r.fields.map((f, i) => `<tr data-i="${i}">
+        <td>${esc(f.name)}</td><td>${esc(f.value)}</td><td>${f.value ? f.confidence : "—"}</td>
+        <td>${f.needs_review ? `<span class="badge b-err">${esc(fieldReviewReason(f))}</span>`
+                              : `<span class="badge b-ok">通过</span>`}</td></tr>`).join("") +
+      `</tbody></table>`;
+    $(ids.fields).querySelectorAll("tbody tr").forEach(tr => tr.onclick = () => {
+      $(ids.fields).querySelectorAll("tr").forEach(x => x.classList.remove("hl"));
+      tr.classList.add("hl");
+      view.active = +tr.dataset.i;
+      // 字段框属于摆正图坐标系：点击字段行时自动切到摆正视图（若有）
+      if (view.rectUrl && !view.rectOn) { view.rectOn = true; applyView(); }
+      else redraw();
+    });
+    const issues = reviewFields.map(field => `${field.name}：${fieldReviewReason(field)}`);
+    $(ids.issues).innerHTML = issues.length ? `<div class="issues">${issues.map(esc).join("<br>")}</div>` : "";
     const json = JSON.stringify(envelope, null, 2);
     $(ids.json).textContent = json;
-    if (blobUrl) URL.revokeObjectURL(blobUrl);
     blobUrl = URL.createObjectURL(new Blob([json], {type: "application/json"}));
     $(ids.download).href = blobUrl; $(ids.download).style.display = "inline-block";
     refreshHealth();
@@ -640,12 +733,14 @@ function makeCertRenderer(ids) {
 
 const certRender = makeCertRenderer({
   img: "imgCert", overlay: "overlay", btnRect: "btnRect", wrap: "certWrap",
+  notice: "certRejected", resultPanel: "certResultPanel", previewTitle: "certPreviewTitle",
   placeholder: "certPlaceholder", title: "certTitle", meta: "certMeta",
   fields: "certFields", issues: "certIssues", json: "certJson",
   btnJson: "btnCertJson", download: "btnCertDownload",
 });
 const batchCertRender = makeCertRenderer({
   img: "bImgCert", overlay: "bOverlay", btnRect: "bBtnRect", wrap: "bCertWrap",
+  notice: "bCertRejected", resultPanel: "bCertResultPanel",
   placeholder: "bCertPlaceholder", title: "bCertTitle", meta: "bCertMeta",
   fields: "bCertFields", issues: "bCertIssues", json: "bCertJson",
   btnJson: "bBtnJson", download: "bBtnDownload",
@@ -899,6 +994,7 @@ const docBatchRender = makeDocRenderer({
 
 /* ---------- 批量 ---------- */
 let batchCur = null;            // 当前批次详情缓存
+let batchRequestId = 0;
 let batchFilter = "all", batchPage = 1;
 const BATCH_PAGE_SIZE = 20;
 
@@ -945,7 +1041,7 @@ function batchItemView(i) {
       : (Number.isFinite(doneSecs) && doneSecs >= 0 ? doneSecs : null);
   if (i.kind !== "card") {                    // 识别成功但路由成文档 → 已跳过
     view.state = "skipped"; view.stateCn = "已跳过"; view.cls = "b-mute";
-    view.problem = i.reason || "不是支持的证件类型";
+    view.problem = CERTIFICATE_REQUIRED;
     if (i.task_type !== "document_scan") view.actions.push("retype");   // 纯文档任务不提供证件重识别
     return view;
   }
@@ -954,9 +1050,7 @@ function batchItemView(i) {
   const bad = fields.filter(f => f.needs_review);
   if (bad.length) {
     view.state = "issues"; view.stateCn = "有问题"; view.cls = "b-warn";
-    view.problem = bad.map(f => `${f.name}${(f.validation?.errors || []).length
-        ? "：" + f.validation.errors.join("，") : ` 置信度 ${f.confidence.toFixed(2)}`}`)
-      .join("；");
+    view.problem = bad.map(f => `${f.name}：${fieldReviewReason(f)}`).join("；");
   } else {
     view.state = "ok"; view.stateCn = "通过"; view.cls = "b-ok";
   }
@@ -1030,36 +1124,43 @@ function renderBatch(b) {
 }
 function batchGoto(p) { batchPage = p; renderBatch(batchCur); }
 
-async function refreshBatchList(selectId) {
+async function refreshBatchList(selectId, requestId) {
   const list = await (await fetch(`${API}/batches`)).json();
+  if (requestId !== batchRequestId) return;
   $("batchSelect").innerHTML = list
     .filter(b => (b.types || "").includes("card"))   // 只列含证件任务的批次（文档批次归文档批量页）
+    .filter(b => !certificateHistoryStart || b.id >= certificateHistoryStart.batchId)
     .map(b => `<option value="${b.id}">#${b.id} · ${bjTime(b.created_at)}`
       + ` · ${b.pending ? "处理中" : "完成"}（${b.done + b.failed}/${b.total}）</option>`).join("");
   if (selectId) $("batchSelect").value = selectId;
 }
 
 async function pollBatch(batchId) {
+  const requestId = ++batchRequestId;
+  if (batchCur?.batch_id !== batchId) $("batchDetailCard").style.display = "none";
   $("batchCard").style.display = "block";
   $("btnExportXlsx").href = `${API}/batches/${batchId}/export?format=xlsx`;
   $("btnExportJson").href = `${API}/batches/${batchId}/export?format=json`;
-  await refreshBatchList(batchId);
+  await refreshBatchList(batchId, requestId);
   let failures = 0;
-  for (;;) {
+  while (requestId === batchRequestId) {
     let b;
     try {
       b = await (await fetch(`${API}/batches/${batchId}`)).json();
       failures = 0;
     } catch (e) {                     // 网络抖动：重试，连续 5 次提示并停止轮询
+      if (requestId !== batchRequestId) return;
       if (++failures > 5) { toast("批次进度轮询中断：" + e.message, true); return; }
       await new Promise(r => setTimeout(r, 2000));
       continue;
     }
+    if (requestId !== batchRequestId) return;
     renderBatch(b);
     if (b.counts.queued === 0 && b.counts.running === 0) break;
     await new Promise(r => setTimeout(r, 3000));
   }
-  refreshBatchList(batchId);
+  if (requestId !== batchRequestId) return;
+  refreshBatchList(batchId, requestId);
   refreshHealth();
 }
 

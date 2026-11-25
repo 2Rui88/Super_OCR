@@ -1,13 +1,36 @@
-"""任务接口 —— GET 轮询详情 / POST 单张重试。"""
+"""任务接口 —— 最近证件图片、轮询详情、单张重试。"""
 from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.core.task_store import MAX_TASK_ATTEMPTS, PERMANENT_ERROR_CODES
 
 router = APIRouter(tags=["tasks"])
+
+
+@router.get("/tasks/recent")
+def recent_cards(request: Request, limit: int = Query(20, ge=1, le=50)):
+    items = []
+    for task in request.app.state.store.recent_card_tasks(limit):
+        try:
+            envelope = json.loads(task.pop("result_json"))
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(envelope, dict) or envelope.get("kind") not in ("card", "document"):
+            continue
+        result = envelope.get("result")
+        if not isinstance(result, dict):
+            continue
+        is_card = envelope["kind"] == "card"
+        items.append({
+            **task,
+            "type_cn": (result.get("doc_type_cn") or "证件") if is_card else "文档图片",
+            "issues": sum(bool(f.get("needs_review")) for f in result.get("fields", [])) if is_card else 0,
+            "duration_ms": result.get("duration_ms" if is_card else "total_duration_ms"),
+        })
+    return {"items": items}
 
 
 @router.get("/tasks/{task_id}")
