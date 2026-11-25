@@ -17,6 +17,8 @@ class OcrLine:
     text: str
     bbox: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 0.0])
     confidence: float = 1.0
+    # 每个词在 text 中的字符区间及其归一化坐标。
+    word_boxes: list[tuple[int, int, list[float]]] = field(default_factory=list)
 
     @property
     def cx(self) -> float:

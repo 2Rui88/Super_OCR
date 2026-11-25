@@ -1,8 +1,8 @@
 """D0 冒烟测试（离线部分）：校验器 + 配置加载 + 分类评分。
 
 用 资料/公开样例/标准答案.json 的真实字段值做验证：
-1. 所有样例的证件号/信用代码/日期都能通过对应校验器（标准答案本身应当合法）；
-2. 故意做错的值，仍生效的规则必须抓出来（安全网自证；身份证校验位规则已取消）；
+1. 公开样例的证件号和信用代码格式正确；
+2. 故意做错的值应被校验器抓出；
 3. 4 类证件配置能加载，分类评分用"字段拼接文本"能判对类型。
 
 运行：python tests/test_d0_offline.py
@@ -39,26 +39,26 @@ def main() -> int:
     print("== 1. 校验器 ==")
     # 算法自证：标准国标测试号必须通过
     check("国标样例身份证号通过", V.validate_chinese_id("11010519491231002X")[0])
-    gt = json.loads(GROUND_TRUTH.read_text(encoding="utf-8"))
-    # 公开样例的号码是虚构的，不满足校验位（考核场景"号码有误"就是故意的），
-    # 且身份证校验位规则已取消 —— 这里只校验格式（位数/字符集/日期段）。
-    # —— 评测口径由此确定：字段准确率 = 抽取值 vs 标准答案字符串比对；
-    #    校验器输出独立统计，不参与准确率。
-    for rec in gt:
-        fields = rec["fields"]
-        for fname, val in fields.items():
-            if fname in ("公民身份号码", "证号"):
-                n = V.normalize_id_number(val)
-                check(f"{rec['file']} {fname} 格式", len(n) == 18 and n[:17].isdigit(),
-                      f"'{val}'")
-            elif fname == "统一社会信用代码":
-                check(f"{rec['file']} {fname} 格式", len(val) == 18, f"'{val}'")
-                print(f"      (校验位状态: {V.validate_uscc(val)[0] or '不通过'} —— 虚构号码，预期内)")
+    if GROUND_TRUTH.exists():
+        gt = json.loads(GROUND_TRUTH.read_text(encoding="utf-8"))
+        # 公开样例含故意不满足校验位的虚构号码。字段准确率和校验结果分别统计。
+        for rec in gt:
+            fields = rec["fields"]
+            for fname, val in fields.items():
+                if fname in ("公民身份号码", "证号"):
+                    n = V.normalize_id_number(val)
+                    check(f"{rec['file']} {fname} 格式", len(n) == 18 and n[:17].isdigit(),
+                          f"'{val}'")
+                elif fname == "统一社会信用代码":
+                    check(f"{rec['file']} {fname} 格式", len(val) == 18, f"'{val}'")
+                    print(f"      (校验位状态: {V.validate_uscc(val)[0] or '不通过'} —— 虚构号码，预期内)")
+    else:
+        print("  跳过公开样例检查：未提供标准答案文件")
 
     print("== 2. 错误必须被抓出（安全网自证） ==")
-    bad_id = "999901199603146918"      # 改末位（校验位规则已取消，结构合法即通过）
+    bad_id = "999901199603146918"
     ok, errs = V.validate_chinese_id(bad_id)
-    check("错校验位身份证不再判失败（规则已取消）", ok, str(errs))
+    check("错校验位身份证被抓", not ok and "校验位" in errs[0], str(errs))
     ok, errs = V.validate_chinese_id("999901199613146917")  # 13月
     check("非法出生月被抓", not ok, str(errs))
     ok, errs = V.validate_uscc("91440300MA5DD1AB8X")       # 改末位

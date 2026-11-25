@@ -38,6 +38,7 @@ from app.core.document_pipeline import (PaddleDocumentEngine, document_engine_si
                                         process_document)
 from app.core.doc_convert import ConvertError, ensure_pdf, is_office_document
 from app.core.card_pipeline import PIPELINE_VERSION
+from app.engine.image_io import InvalidImageError
 from app.core.image_routing import process_image
 from app.core.task_store import ClaimedTask, TaskStore
 
@@ -287,13 +288,14 @@ def main() -> int:
         return any(not field["value"] or field["needs_review"] for field in fields)
 
     def _card_score(envelope: dict) -> tuple:
-        """择优打分：通过校验的字段数 > 非空字段数 > 类型置信度。平分保守取首跑。"""
+        """择优比较校验通过、非空、无需复核的字段数，最后比较类型置信度。"""
         result = envelope["result"]
         fields = result.get("fields", [])
         passed = sum(1 for f in fields
                      if f["value"] and f["validation"]["passed"])
         filled = sum(1 for f in fields if f["value"])
-        return (passed, filled, result.get("type_confidence", 0.0))
+        verified = sum(1 for f in fields if f["value"] and not f["needs_review"])
+        return (passed, filled, verified, result.get("type_confidence", 0.0))
 
     def _run_card_with_registry(task: ClaimedTask, registry: dict,
                                 key_prefix: list) -> tuple[str, dict]:
@@ -324,7 +326,7 @@ def main() -> int:
                                       registry=registry, sha256=task.file_sha256,
                                       hint_type=task.hint_type,
                                       card_det_side=config.card_retry_side,
-                                      card_rectified_out=rect_path)
+                                      card_rectified_out=rect_path, recheck_zero_fields=False)
                 if _card_score(retry) > _card_score(envelope):
                     retry["result"]["det_side"] = config.card_retry_side
                     envelope = retry
@@ -450,6 +452,9 @@ def main() -> int:
             store.fail_task(task.id, error_code=exc.error_code,
                             error_message=str(exc))
             log.warning("任务 #%d 转换失败（%s）：%s", task.id, exc.error_code, exc)
+        except InvalidImageError as exc:
+            store.fail_task(task.id, error_code="UNSUPPORTED_FORMAT", error_message=str(exc))
+            log.warning("任务 #%d 的原始图片解码失败", task.id)
         except TrialNotReady as exc:
             # 任务已重排队，不算失败；立即回循环重新领取
             log.info("%s", exc)

@@ -1,13 +1,14 @@
 """证件配置加载 + 类型分类。
 
 - 启动时扫描 config/certs/*.yaml，注册进内存表（新增证件 = 加文件，不改代码）；
-- 分类用关键词评分：强特征必现 + 正向加分 + 负向减分，领先幅度不足则判 unknown。
+- 分类结合证件特征和关键词得分，特征不足或分数接近时判 unknown。
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import yaml
@@ -30,6 +31,7 @@ class FieldConfig(BaseModel):
     allowed: list[str] = Field(default_factory=list)  # enum 用
     position: str = "same_line"     # same_line | next_line
     multi_line: bool = False
+    optional: bool = False          # 未识别到字段标签时不输出
     # 值清洗：从值中剔除的水印/噪声词（样例件的"样本"戳、复印件"副本"字样等）
     stop_words: list[str] = Field(default_factory=lambda: ["样本"])
 
@@ -112,6 +114,11 @@ def registry_hash(registry: dict[str, CertConfig]) -> str:
     """registry 内容指纹：进证件缓存键，YAML 变更 → 缓存自动失效。"""
     payload = {type_id: cfg.model_dump(mode="json")
                for type_id, cfg in sorted(registry.items())}
+    # 未声明可选字段的旧版配置继续使用原有指纹，显式启用时才改变指纹。
+    for cfg in payload.values():
+        for field in cfg["fields"]:
+            if not field["optional"]:
+                del field["optional"]
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
@@ -124,6 +131,24 @@ _NEGATIVE_EACH = -2.0     # 负向词每个 -2
 _MIN_SCORE = 2.0          # 低于此分视为"不是这4类证件"
 _MIN_MARGIN = 1.0         # 与第二名的最小领先幅度
 
+_OTHER_ID_TITLE = re.compile(
+    r".*(?:工作证|工牌|居住证|员工(?:入职|信息)登记表|入职登记表)(?:[（(][^()（）]*[）)])?"
+)
+_ID_FRONT_LABELS = ("姓名", "性别", "民族", "出生", "住址")
+
+
+def _has_id_front_evidence(text: str) -> bool:
+    text = "\n".join(re.sub(r"\s+", "", line) for line in text.splitlines())
+    if any(_OTHER_ID_TITLE.fullmatch(line) for line in text.splitlines()):
+        return False
+    labels = sum(label in text for label in _ID_FRONT_LABELS)
+    number_label = re.search(r"公民身份号码|身份[证]?号码", text)
+    number = re.search(r"(?<![0-9])[0-9]{17}[0-9Xx](?![0-9])", text)
+    # 证号标签和一组基本字段是正面的典型组合。标签漏读时仍可用证号或完整字段组判断。
+    return (number_label is not None and (labels >= 2 or "居民身份证" in text)
+            or labels >= 3 and number is not None
+            or labels == len(_ID_FRONT_LABELS))
+
 
 def classify(
     text: str, registry: dict[str, CertConfig]
@@ -131,6 +156,8 @@ def classify(
     """全文关键词评分 → (type_id, confidence)。判不出返回 ('unknown', 0)。"""
     scores: dict[str, float] = {}
     for type_id, cfg in registry.items():
+        if type_id == "id_front" and not _has_id_front_evidence(text):
+            continue
         cl = cfg.classification
         score = 0.0
         for kw in cl.required:

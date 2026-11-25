@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from app.core.doc_convert import ConvertError, convert_office_to_pdf, ensure_pdf
-from app.core.document_pipeline import (DOCUMENT_TASK_TYPES,
+from app.core.document_pipeline import (DOCUMENT_TASK_TYPES, PaddleDocumentEngine,
                                         document_engine_signature, process_document)
 from app.core.task_store import TaskStore
 from app.engine.paddle_card import PaddleCardConfig, mkldnn_validated
@@ -95,6 +95,40 @@ class UnifiedDocumentTest(unittest.TestCase):
         self.assertEqual([s[0] for s in seen], [1, 2])          # 页序正确
         self.assertEqual([s[1] for s in seen], [2, 2])          # 总数正确
         self.assertTrue(all(s[2] == 1 and s[3] >= 0 for s in seen))
+
+
+class TableOrientationTest(unittest.TestCase):
+    def test_rechecks_only_the_mistaken_half_turn_on_a_mixed_page(self):
+        def layout(box, value):
+            return {"block_label": "table", "block_bbox": box,
+                    "block_content": f"<table><tr><td>{value}</td></tr></table>"}
+
+        def half_turn(block):
+            x, y, _, _ = block["block_bbox"]
+            return {"pred_html": block["block_content"],
+                    "cell_box_list": [[x+50, y+40, x+100, y+80], [x, y+40, x+50, y+80],
+                                      [x+50, y, x+100, y+40], [x, y, x+50, y+40]]}
+
+        upright = [0, 0, 100, 80]
+        upside_down = [120, 0, 220, 80]
+        first = [layout(upright, "误旋转"), layout(upside_down, "正确旋转")]
+        text_boxes = [[x+10, y, x+40, y+10] for x in (0, 120) for y in (8, 30, 52)]
+        initial = {"parsing_res_list": first, "table_res_list": [half_turn(b) for b in first],
+                   "overall_ocr_res": {"textline_orientation_angles": [0, 0, 0, 1, 1, 1],
+                                       "rec_boxes": text_boxes, "rec_scores": [0.99] * 6,
+                                       "rec_texts": ["职级", "一类城市", "副高级"] * 2}}
+        retry = {"parsing_res_list": [layout(upright, "恢复正向"),
+                                     layout(upside_down, "不应采用的复读结果")]}
+        engine = PaddleDocumentEngine()
+        engine._pipeline = mock.Mock()
+        engine._pipeline.predict.side_effect = [[initial], [retry]]
+        page = mock.Mock(shape=(100, 240, 3))
+
+        blocks = engine(page, 1)
+
+        self.assertEqual([block.text for block in blocks], ["恢复正向", "正确旋转"])
+        self.assertEqual(engine._pipeline.predict.call_args_list,
+                         [mock.call(page), mock.call(page, use_table_orientation_classify=False)])
 
 
 class DocConvertTest(unittest.TestCase):

@@ -10,6 +10,8 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
+from app.engine.image_io import INVALID_IMAGE_MESSAGE, open_decoded_image
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 PDF_EXTENSIONS = {".pdf"}
 # Office 文档：上传后由 worker 统一转 PDF 再走文档链路
@@ -59,13 +61,15 @@ def save_upload(content: bytes, original_filename: str, *, allowed: set[str],
         if not valid:
             _reject(415, "UNSUPPORTED_FORMAT", problem)
     else:
-        try:
-            from PIL import Image
+        from PIL import Image
 
+        try:
             with Image.open(BytesIO(content)) as im:
                 im.verify()
-        except Exception:
-            _reject(415, "UNSUPPORTED_FORMAT", "文件内容不是有效的图片")
+            with open_decoded_image(BytesIO(content)):
+                pass
+        except (OSError, SyntaxError, ValueError, Image.DecompressionBombError):
+            _reject(415, "UNSUPPORTED_FORMAT", INVALID_IMAGE_MESSAGE)
     digest = hashlib.sha256(content).hexdigest()
     path = upload_dir / f"{digest}{ext}"
     if not path.exists():

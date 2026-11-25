@@ -3,7 +3,7 @@
 设计原则：
 - 每个校验器返回 (passed, errors)，errors 是"人话"原因，直接进结果 JSON；
 - 匹配前先归一化（去空格/换行）——OCR 常把 18 位证号断成两行（leaudit 踩过的坑）；
-- 校验不过的字段由上层把置信度压 0 并标 needs_review。
+- 校验不过的字段由上层标 needs_review，保留 OCR 置信度。
 """
 
 from __future__ import annotations
@@ -12,6 +12,9 @@ import re
 
 # ---------------------------------------------------------------- 身份证号
 
+_ID_WEIGHTS = (7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2)
+_ID_CHECK = "10X98765432"
+
 
 def normalize_id_number(raw: str) -> str:
     """归一化证号：去空白、统一大写 X（容忍 OCR 断行/断空格）。"""
@@ -19,17 +22,19 @@ def normalize_id_number(raw: str) -> str:
 
 
 def validate_chinese_id(raw: str) -> tuple[bool, list[str]]:
-    # 校验位（GB 11643 mod-11-2）规则已取消：样本多为虚构号，校验位必不匹配造成误报。
-    # 只保留结构校验：位数/字符集/出生日期段。
     id_no = normalize_id_number(raw)
     if len(id_no) != 18:
         return False, [f"身份证号应为18位，识别为{len(id_no)}位"]
-    if not re.fullmatch(r"\d{17}[0-9X]", id_no):
+    if not re.fullmatch(r"[0-9]{17}[0-9X]", id_no):
         return False, ["身份证号前17位应全为数字，且末位为数字或X"]
     # 日期段合法性
     ok, err = _check_date_segment(id_no[6:14])
     if not ok:
         return False, [f"证号中出生日期段无效：{err}"]
+    weighted = sum(int(digit) * weight for digit, weight in zip(id_no[:17], _ID_WEIGHTS))
+    expected = _ID_CHECK[weighted % 11]
+    if id_no[-1] != expected:
+        return False, [f"校验位错误，期望 {expected}，识别为 {id_no[-1]}"]
     return True, []
 
 
@@ -71,8 +76,14 @@ _USCC_WEIGHTS = [1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28]
 
 def validate_uscc(raw: str) -> tuple[bool, list[str]]:
     code = re.sub(r"\s+", "", str(raw or "")).upper()
+    errors = []
     if len(code) != 18:
-        return False, [f"统一社会信用代码应为18位，识别为{len(code)}位"]
+        errors.append(f"统一社会信用代码应为18位，识别为{len(code)}位")
+    invalid = sorted(set(code) - set(_USCC_CHARS))
+    if invalid:
+        errors.append(f"含非法字符 {'、'.join(invalid)}")
+    if errors:
+        return False, errors
     total = sum(_USCC_CHARS.index(c) * _USCC_WEIGHTS[i] for i, c in enumerate(code[:17]))
     expected = _USCC_CHARS[(31 - total % 31) % 31]
     if code[17] != expected:
@@ -160,6 +171,13 @@ def validate_period(raw: str) -> tuple[bool, list[str]]:
     return validate_date_range(start, end)
 
 
+def validate_business_period(raw: str) -> tuple[bool, list[str]]:
+    """执照可以只标注长期，有日期区间时核查实际日期和起止顺序。"""
+    if re.sub(r"\s+", "", str(raw or "")) == "长期":
+        return True, []
+    return validate_period(raw)
+
+
 # ---------------------------------------------------------------- 枚举/金额
 
 def validate_enum(value: str, allowed: list[str]) -> tuple[bool, list[str]]:
@@ -176,6 +194,15 @@ def validate_money(raw: str) -> tuple[bool, list[str]]:
     return True, []
 
 
+def validate_business_scope(raw: str) -> tuple[bool, list[str]]:
+    text = re.sub(r"\s+", "", raw)
+    # 多个类目之间连用冒号、或句号把审批条件截开时，优先复核原图。
+    separators = re.findall(r"(?<=[\u3400-\u9fff])[：:](?=[\u3400-\u9fff])", text)
+    if len(separators) > 1 or re.search(r"批准的项目[。.]经相关部门", text):
+        return False, ["经营范围的分隔标点可能识别有误，请核对原图"]
+    return True, []
+
+
 # ---------------------------------------------------------------- 注册表
 
 #: 字段类型 → 校验函数注册表。YAML 里 type: chinese_id 即引用此表。
@@ -186,6 +213,7 @@ FIELD_VALIDATORS: dict[str, callable] = {  # type: ignore[type-arg]
     "date": validate_date,
     "money": validate_money,
     "period": validate_period,
+    "business_period": validate_business_period,
 }
 
 
