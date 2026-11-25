@@ -43,7 +43,7 @@ _CHUNKS = (
     "SELECT c.id, c.doc_id, c.page_num, c.bbox, c.type, c.row_index, c.heading_path,"
     " c.seek_text, c.html, c.crop_path, c.linear_text, c.vl_desc, d.filename, d.sha256, d.pdf_path"
     " FROM chunks c JOIN documents d ON d.id=c.doc_id"
-    " WHERE d.status='ready' AND d.superseded_by IS NULL"
+    " WHERE d.status='ready'"
 )
 
 

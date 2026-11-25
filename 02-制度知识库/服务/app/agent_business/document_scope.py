@@ -88,7 +88,7 @@ def _resolve(doc_id: int | None, name: str, question: str, *, exact: bool = Fals
     with connect() as db:
         rows = [dict(row) for row in db.execute(
             "SELECT id, filename, sha256, pdf_path FROM documents"
-            " WHERE status='ready' AND superseded_by IS NULL"
+            " WHERE status='ready'"
         )]
         headings = db.execute(
             "SELECT DISTINCT doc_id, heading_path FROM chunks WHERE page_num<=2 AND heading_path<>''"

@@ -20,7 +20,7 @@ def current_editions(hits: list[dict], question: str) -> list[int]:
     with connect() as db:
         rows = db.execute(
             "SELECT d.id, d.filename, c.seek_text FROM chunks c JOIN documents d ON c.doc_id=d.id"
-            " WHERE d.status='ready' AND d.superseded_by IS NULL AND c.type='text'"
+            " WHERE d.status='ready' AND c.type='text'"
             " AND (instr(c.seek_text,'施行') OR instr(c.seek_text,'实施') OR instr(c.seek_text,'生效'))"
         )
         today = date.today()

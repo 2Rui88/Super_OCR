@@ -31,7 +31,7 @@ _FIGURE_APPENDIX = re.compile(r"附录\s*([a-z])(?![a-z])", re.I)
 _FIGURE_TERMS = re.compile(r"流程图|泳道图|图注")
 _TABLE_TERMS = re.compile(r"流程(?:图)?节点说明|节点说明表|工作指引")
 _SEARCHABLE = (
-    "d.status='ready' AND d.superseded_by IS NULL"
+    "d.status='ready'"
     " AND (c.type NOT IN ('table_full', 'table_row') OR NOT EXISTS ("
     " SELECT 1 FROM chunks f WHERE f.doc_id=c.doc_id AND f.page_num=c.page_num"
     " AND f.bbox=c.bbox AND f.type='figure' AND f.vl_desc LIKE '节点和岗位：%'))"
@@ -232,7 +232,7 @@ async def search(question: str, *, doc_id: int | None = None, top_k: int = FINAL
                 f"SELECT c.id, c.doc_id, c.page_num, c.bbox, c.type, c.row_index, c.heading_path,"
                 f"       c.seek_text, c.html, c.crop_path, c.linear_text, c.vl_desc,"
                 f"       c.source_mode, c.ocr_confidence,"
-                f"       d.filename, d.sha256, d.pdf_path, d.superseded_by"
+                f"       d.filename, d.sha256, d.pdf_path"
                 f" FROM chunks c JOIN documents d ON d.id = c.doc_id"
                 f" WHERE c.id IN ({marks}) AND {_SEARCHABLE}", tuple(top_ids)).fetchall()
             by_id = {r["id"]: dict(r) for r in rows}

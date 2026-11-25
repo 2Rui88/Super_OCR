@@ -57,12 +57,12 @@ def _find_soffice() -> str | None:
 
 def convert_to_pdf(src: Path, job: queue.ClaimedDoc) -> Path:
     """统一收敛到 PDF（此后只有一条解析路径）。pdf 直通；doc/docx 走 soffice，
-    本机无 soffice 时退 Word COM。转换产物按内容寻址，重复导入零转换。"""
+    本机无 soffice 时退 Word COM。同一任务重试可复用已完成的转换产物。"""
     if src.suffix.lower() == ".pdf":
         return src
     out_dir = settings.data_dir / "converted"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_pdf = out_dir / f"{job.sha256[:16]}.pdf"
+    out_pdf = out_dir / f"doc{job.id}.pdf"
     if out_pdf.exists():
         return out_pdf
     # 转换线程可能在协程取消后继续运行。临时文件独立，持有租约才能发布缓存。
@@ -261,25 +261,28 @@ def _union(a: list[float], b: list[float]) -> list[float]:
 _RESCUE_IMAGE_RATIO = 0.30  # 直读页图像面积占比超过该值且无表格/图形块 → 补救
 
 
-def _page_to_image_pdf(pdf_path: str, page_num: int, sha256: str) -> Path:
+def _page_to_image_pdf(pdf_path: str, page_num: int, job: queue.ClaimedDoc) -> Path:
     """把指定页渲染成单页图片 PDF（144dpi 与 P1 同基准）。图片 PDF 无文字层，
     P1 的页面分流自然走整页 PP-StructureV3 → 产出 FIGURE 块。"""
     import pymupdf
 
     out_dir = settings.data_dir / "rescue"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_pdf = out_dir / f"{sha256[:16]}_p{page_num}.pdf"
+    out_pdf = out_dir / f"doc{job.id}_p{page_num}.pdf"
     if out_pdf.exists():
         return out_pdf
-    tmp = out_pdf.with_suffix(".tmp.pdf")
-    with pymupdf.open(pdf_path) as doc:
-        pix = doc[page_num - 1].get_pixmap(dpi=144, alpha=False)
-        img = pix.tobytes("png")
-    with pymupdf.open() as new:  # 单页图片 PDF
-        page = new.new_page(width=pix.width / 2, height=pix.height / 2)  # 72dpi 基准
-        page.insert_image(page.rect, stream=img)
-        new.save(str(tmp))
-    tmp.replace(out_pdf)
+    with tempfile.TemporaryDirectory(dir=out_dir) as directory:
+        tmp = Path(directory) / out_pdf.name
+        with pymupdf.open(pdf_path) as doc:
+            pix = doc[page_num - 1].get_pixmap(dpi=144, alpha=False)
+            img = pix.tobytes("png")
+        with pymupdf.open() as new:  # 单页图片 PDF
+            page = new.new_page(width=pix.width / 2, height=pix.height / 2)  # 72dpi 基准
+            page.insert_image(page.rect, stream=img)
+            new.save(str(tmp))
+        with queue.lease_write(job.id, job.lease_token):
+            if not out_pdf.exists():
+                tmp.replace(out_pdf)
     return out_pdf
 
 
@@ -312,7 +315,7 @@ async def rescue_figures(job, pdf_path: str | None, p1_result: dict, set_phase) 
     targets = await asyncio.to_thread(_candidates)
     for n in targets:
         set_phase(f"流程图补救 第{n}页")
-        single = await asyncio.to_thread(_page_to_image_pdf, pdf_path, n, job.sha256)
+        single = await asyncio.to_thread(_page_to_image_pdf, pdf_path, n, job)
         ocr_result = await recognize_pdf(
             str(single), alive=lambda: queue.holds_lease(job.id, job.lease_token))
         ocr_page = ocr_result["pages"][0]
@@ -429,5 +432,13 @@ def store_upload(data: bytes, sha256: str, ext: str) -> Path:
     """A1 收件：内容寻址落盘（同文件零重复存储）。"""
     path = upload_path(sha256, ext)
     if not path.exists():
-        path.write_bytes(data)
+        with tempfile.TemporaryDirectory(prefix="upload-", dir=path.parent) as directory:
+            staged = Path(directory) / path.name
+            staged.write_bytes(data)
+            try:
+                staged.replace(path)
+            except PermissionError:
+                # 并发上传已发布同一份原件时，Windows 可能拒绝覆盖打开的文件。
+                if not path.is_file():
+                    raise
     return path

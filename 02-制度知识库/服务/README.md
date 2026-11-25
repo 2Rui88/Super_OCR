@@ -39,11 +39,11 @@ copy .env.example .env                                        # 填 DASHSCOPE_AP
 
 | 接口 | 说明 |
 |---|---|
-| `POST /documents` | 批量导入（multipart files + replaces=旧文档id 实现版本替代），秒回入队 |
+| `POST /documents` | 批量导入（multipart files），每个上传文件独立入队 |
 | `GET /documents` | 文档库列表 + 统计卡数据 |
 | `GET /documents/{id}` | 解析详情（目录结构 + 块列表） |
 | `POST /documents/{id}/reparse` | 重新解析（就绪文档从存档 JSON 重放，不重烧 OCR；处理中文档由租约闭环自动止损） |
-| `DELETE /documents/{id}` | 删除（清块 + FAISS 增量摘 + 旧版恢复可见） |
+| `DELETE /documents/{id}` | 删除（清块 + FAISS 增量摘） |
 | `POST /index/rebuild` | 重建索引（SQLite BLOB 重放，零 API 费） |
 | `GET /queue/stats` | 队列水位（pending/processing/failed + 最老任务年龄） |
 | `POST /qa/ask` | SSE 问答（citations → delta* → refuse/done），支持 conversation_id 多轮 |

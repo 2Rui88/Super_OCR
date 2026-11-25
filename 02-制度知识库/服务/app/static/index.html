@@ -147,7 +147,6 @@
   .pill.processing{background:var(--brand-weak);color:var(--brand)}
   .pill.ready{background:var(--ok-bg);color:var(--ok)}
   .pill.failed{background:var(--err-bg);color:var(--err)}
-  .pill.old{background:var(--warn-bg);color:var(--warn)}
   .prog-card{background:var(--brand-weak);border:1px solid #d6e0ff;color:var(--brand);border-radius:10px;
              padding:10px 14px;margin-bottom:14px;font-size:13px}
 
@@ -231,7 +230,7 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>文件名</th><th>格式</th><th>页数</th><th>表格</th><th>流程图</th><th>版本</th><th>状态</th><th>操作</th></tr></thead>
+            <thead><tr><th>文件名</th><th>格式</th><th>页数</th><th>表格</th><th>流程图</th><th>状态</th><th>操作</th></tr></thead>
             <tbody id="doc-rows"></tbody>
           </table>
         </div>
@@ -616,7 +615,7 @@ async function loadDocs(){
   const r=await (await fetch(API+'/documents')).json();
   const s=r.stats;
   $('doc-stats').innerHTML=
-    ['files|文件','pages|页','tables|表格','figures|流程图','superseded|旧版'].map(x=>{
+    ['files|文件','pages|页','tables|表格','figures|流程图'].map(x=>{
       const[k,n]=x.split('|');return `<div class="stat"><b>${s[k]??0}</b><span>${n}</span></div>`;}).join('')+
     (s.pending+s.processing+s.failed?`<div class="stat"><b>${s.pending+s.processing}</b><span>处理中/待处理</span></div>`:'');
   $('doc-rows').innerHTML=(r.documents||[]).map(d=>{
@@ -624,7 +623,6 @@ async function loadDocs(){
     if(d.status==='failed')acts.push(`<button class="btn mini ghost" onclick="reparse(${d.id})">重试</button>`);
     return `<tr><td>${esc(d.filename)}</td><td>${d.fmt.replace('.','')}</td>
       <td>${d.page_count??'-'}</td><td>${d.table_count??'-'}</td><td>${d.figure_count??'-'}</td>
-      <td>${d.superseded_by?'<span class="pill old">旧版</span>':''}</td>
       <td><span class="pill ${d.status}">${d.status_cn}</span>${d.phase?`<div class="muted">${esc(d.phase)}</div>`:''}
           ${d.status==='failed'&&d.error?`<div class="muted" style="color:var(--err)">原因：${esc(d.error.slice(0,60))}</div>`:''}</td>
       <td>${acts.join(' ')} <button class="btn mini ghost" onclick="delDoc(${d.id})">删除</button></td></tr>`;
@@ -633,18 +631,11 @@ async function loadDocs(){
   clearTimeout(docTimer);
   if(s.pending+s.processing>0)docTimer=setTimeout(loadDocs,3000);
 }
-/* 导入弹窗：批量选择 + 替代旧版本 */
-async function openImport(){
-  const docs=((await (await fetch(API+'/documents')).json()).documents||[]).filter(d=>d.status==='ready');
+/* 导入弹窗 */
+function openImport(){
   $('modal-title').textContent='导入文档';
   $('modal-body').innerHTML=`
     <div style="margin-bottom:12px"><input type="file" id="imp-files" multiple accept=".doc,.docx,.pdf"></div>
-    <label class="muted">替代旧版本（可选）：选中后旧版标为"旧版"，问答默认按新版回答</label>
-    <select id="imp-replace" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--line-strong);border-radius:8px">
-      <option value="">不替代</option>
-      ${docs.map(d=>`<option value="${d.id}">${esc(d.filename)}</option>`).join('')}
-    </select>
-    <div class="muted" style="margin-top:6px">重复文件：内容相同则跳过</div>
     <div style="margin-top:16px;text-align:right;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn ghost" onclick="closeModal()">取消</button>
       <button class="btn" onclick="doImport()">开始导入</button>
@@ -653,11 +644,9 @@ async function openImport(){
 }
 async function doImport(){
   const files=$('imp-files').files;
-  const rep=$('imp-replace').value;
   if(!files.length){alert('请选择文件');return;}
   const fd=new FormData();
   for(const f of files)fd.append('files',f,f.name);
-  if(rep)fd.append('replaces',rep);
   const r=await (await fetch(API+'/documents',{method:'POST',body:fd})).json();
   closeModal();
   alert(r.results.map(x=>`${x.filename}: ${x.outcome||x.error}`).join('\n'));

@@ -230,7 +230,7 @@ class IngestRecoveryTest(unittest.IsolatedAsyncioTestCase):
              patch.object(pipeline, "_run_cmd", side_effect=convert):
             with self.assertRaises(queue.LeaseLost):
                 await asyncio.to_thread(pipeline.convert_to_pdf, source, old)
-        self.assertFalse((settings.data_dir / "converted" / f"{old.sha256}.pdf").exists())
+        self.assertFalse((settings.data_dir / "converted" / f"doc{old.id}.pdf").exists())
 
     async def test_legacy_schema_gains_checkpoint_and_lease_columns(self):
         legacy_db = self.pdf.with_name("legacy.sqlite3")

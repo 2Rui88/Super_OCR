@@ -25,9 +25,6 @@ LEASE_LOST = "lost"
 
 # 入队结果
 QUEUED = "queued"          # 新任务
-REQUEUED = "requeued"      # failed 行被重置（手动重试/重新解析）
-INFLIGHT = "inflight"      # 同内容正在处理，幂等复用
-DUPLICATE = "duplicate"    # 同内容已就绪，不重复导入
 
 
 def _now() -> int:
@@ -42,7 +39,6 @@ class ClaimedDoc:
     sha256: str
     pdf_path: str | None
     p1_result_json: str | None
-    replaces_target: int | None
     worker: str
     lease_token: str
     p1_request_key: str | None
@@ -67,32 +63,14 @@ def lease_write(doc_id: int, lease_token: str):
         yield db
 
 
-def enqueue(filename: str, fmt: str, sha256: str, *, pdf_path: str | None = None,
-            replaces_target: int | None = None) -> tuple[str, int]:
-    """幂等入队。返回 (结果, doc_id)。
-
-    同内容在途 → inflight（复用）；已就绪 → duplicate（是否替代由调用方在上层
-    用 replaces_target 建新行决定，这里不悄悄改旧行）；failed → 重置重投。
-    """
+def enqueue(filename: str, fmt: str, sha256: str, *,
+            pdf_path: str | None = None) -> tuple[str, int]:
+    """为每次导入创建独立的待处理文档。"""
     with connect() as db:
-        row = db.execute(
-            "SELECT id, status FROM documents WHERE sha256=? ORDER BY id DESC LIMIT 1",
-            (sha256,)).fetchone()
-        if row is not None and row["status"] in ("pending", "processing"):
-            return INFLIGHT, row["id"]
-        if row is not None and row["status"] == "ready" and not replaces_target:
-            return DUPLICATE, row["id"]
-        if row is not None and row["status"] == "failed":
-            db.execute(
-                "UPDATE documents SET status='pending', attempts=0, error='', worker='',"
-                " lease_token=NULL, phase='', heartbeat_at=0, replaces_target=?,"
-                " pdf_path=COALESCE(?, pdf_path)"
-                " WHERE id=?", (replaces_target, pdf_path, row["id"]))
-            return REQUEUED, row["id"]
         cur = db.execute(
-            "INSERT INTO documents (filename, fmt, sha256, status, pdf_path,"
-            " replaces_target, created_at) VALUES (?,?,?,'pending',?,?,?)",
-            (filename, fmt, sha256, pdf_path, replaces_target, _now()))
+            "INSERT INTO documents (filename, fmt, sha256, status, pdf_path, created_at)"
+            " VALUES (?,?,?,'pending',?,?)",
+            (filename, fmt, sha256, pdf_path, _now()))
         return QUEUED, cur.lastrowid
 
 
@@ -108,7 +86,7 @@ def claim_next(worker_id: str) -> ClaimedDoc | None:
                 "UPDATE documents SET status='processing', worker=?, lease_token=?, heartbeat_at=?,"
                 " attempts=attempts+1, error='', phase=''"
                 " WHERE id=? AND status='pending'"
-                " RETURNING id, filename, fmt, sha256, pdf_path, p1_result_json, replaces_target,"
+                " RETURNING id, filename, fmt, sha256, pdf_path, p1_result_json,"
                 "           worker, lease_token, p1_request_key, p1_task_id",
                 (worker_id, lease_token, _now(), cand["id"])).fetchone()
             if row is not None:
@@ -190,7 +168,7 @@ def finish(doc_id: int, lease_token: str, *, ok: bool, error: str = "",
            counts: tuple[int, int, int] | None = None) -> str | None:
     """收敛终态（仅持有者可写）。丢租约返回 None，本次执行作废。
 
-    就绪时写入统计并落实"替代旧版本"（旧文档标 superseded_by）。
+    就绪时写入解析统计。
     """
     err = (error or "")[:500]
     with connect() as db:
@@ -202,14 +180,6 @@ def finish(doc_id: int, lease_token: str, *, ok: bool, error: str = "",
                 (_now(), *(counts or (0, 0, 0)), doc_id, lease_token)).fetchone()
             if row is None:
                 return None
-            # 替代旧版本：先读声明的目标，落实 superseded_by，再清声明位
-            target = db.execute("SELECT replaces_target FROM documents WHERE id=?",
-                                (doc_id,)).fetchone()
-            if target and target["replaces_target"]:
-                db.execute(
-                    "UPDATE documents SET superseded_by=? WHERE id=? AND id != ?",
-                    (doc_id, target["replaces_target"], doc_id))
-            db.execute("UPDATE documents SET replaces_target=NULL WHERE id=?", (doc_id,))
             return "ready"
         row = db.execute(
             "UPDATE documents SET"

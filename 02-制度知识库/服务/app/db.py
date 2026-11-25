@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS documents (
     attempts       INTEGER NOT NULL DEFAULT 0,
     error          TEXT NOT NULL DEFAULT '',
     page_count     INTEGER, table_count INTEGER, figure_count INTEGER,
-    superseded_by  INTEGER,                      -- 旧版指向新版 id（检索默认过滤）
-    replaces_target INTEGER,                     -- 导入时声明的"替代旧版本"目标
+    superseded_by  INTEGER,                      -- 兼容既有数据库，启动时清理
+    replaces_target INTEGER,                     -- 兼容既有数据库，启动时清理
     pdf_path       TEXT,                         -- 实际送识别的 PDF（原件或转换产物）
     p1_request_key TEXT,                         -- POST 前持久化，响应丢失时用同一键重送
     p1_task_id     INTEGER,                      -- 已收到的 OCR 任务编号
@@ -140,6 +140,9 @@ def init_db() -> None:
                                  ("p1_task_id", "INTEGER")):
             if column not in columns:
                 db.execute(f"ALTER TABLE documents ADD COLUMN {column} {sql_type}")
+        db.execute(
+            "UPDATE documents SET superseded_by=NULL, replaces_target=NULL"
+            " WHERE superseded_by IS NOT NULL OR replaces_target IS NOT NULL")
 
 
 @contextmanager
